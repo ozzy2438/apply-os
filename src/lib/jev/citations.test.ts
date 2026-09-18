@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { citationVerdict, composeCoverLetterCheck, guardResult } from "./citations";
+import { heuristicGuards } from "./mock";
 import type { CvBullet } from "./types";
 
 const bullets: CvBullet[] = [
@@ -72,5 +73,22 @@ describe("citations", () => {
       [guardResult("fake_production", { type: "noul", noul: 0.1 })],
     );
     expect(clean.ready).toBe(true);
+  });
+});
+
+describe("heuristicGuards", () => {
+  const cv = "Independent product; production-style operation, not a named enterprise owner.";
+
+  it("does not trip on a cover letter that refuses to invent ownership", () => {
+    const letter =
+      "Built a retail-fuel demand forecasting pipeline in Python. I would rather under-claim than invent live enterprise operation.";
+    const guards = heuristicGuards(letter, cv);
+    expect(guards.fake_production.noul).toBeLessThan(0.2);
+  });
+
+  it("trips when the letter claims to be the production owner", () => {
+    const letter = "I was the production owner of Horizon's live forecasting service.";
+    const guards = heuristicGuards(letter, cv);
+    expect(guards.fake_production.noul).toBeGreaterThanOrEqual(0.8);
   });
 });

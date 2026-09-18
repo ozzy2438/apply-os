@@ -35,7 +35,7 @@ export function templateCoverLetter(
     "",
     ...claims.map((c, i) => `${i + 1}. ${c.claim}`),
     "",
-    "Every claim above is tied to a CV evidence bullet. I would rather under-claim than invent production ownership.",
+    "Every claim above is tied to a CV evidence bullet. I would rather under-claim than invent live enterprise operation.",
     "",
     "Kind regards",
   ].join("\n");

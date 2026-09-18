@@ -190,10 +190,12 @@ export function heuristicGuards(letter: string, cv: string): Record<"inflated_te
   const l = letter.toLowerCase();
   const c = cv.toLowerCase();
   const inflated = /\b(\d{2}|ten|twelve)\+?\s+years\b/.test(l) && !c.includes("10+") && !c.includes("12");
-  const fakeProd =
-    (l.includes("production owner") || l.includes("enterprise adopted") || l.includes("operated in production for")) &&
-    !c.includes("production-operated") &&
-    (c.includes("independent") || c.includes("production-style"));
+  const claimsLiveOwnership =
+    /\bproduction owners?\b/.test(l) ||
+    l.includes("enterprise adopted") ||
+    l.includes("operated in production for");
+  const cvDeniesLiveOwnership = c.includes("independent") || c.includes("production-style");
+  const fakeProd = claimsLiveOwnership && !c.includes("production-operated") && cvDeniesLiveOwnership;
   const tools = ["sas viya", "kubernetes operator", "spark streaming", "snowflake"].filter(
     (t) => l.includes(t) && !c.includes(t),
   );
