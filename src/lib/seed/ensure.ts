@@ -1,4 +1,4 @@
-import { SAMPLE_BULLETS, SAMPLE_CONSTRAINTS, SAMPLE_GOALS, SAMPLE_POSTINGS, SAMPLE_WEIGHTS } from "./fixtures";
+import { SAMPLE_BULLETS, SAMPLE_GOALS, SAMPLE_POSTINGS, SAMPLE_WEIGHTS } from "./fixtures";
 import {
   countOpportunities,
   getProfile,
@@ -11,19 +11,30 @@ import {
 import { evaluateOpportunity } from "@/lib/jev/evaluate";
 import { suggestedStatus } from "@/lib/jev/compose";
 import { ensureTodayBriefing } from "@/lib/briefing-service";
-import { DEFAULT_CANDIDATE_PROFILE } from "@/lib/domain/defaults";
 import { evidenceFromBullets } from "@/lib/policy/evidence";
 import { getCandidateRules, listEvidence, replaceEvidence, saveCandidateRules } from "@/lib/db/store-extended";
 import { backfillCanonicalForOpportunity } from "@/lib/ingest/pipeline";
+import { loadCanonicalProfile } from "@/lib/canonical/load";
+import { canonicalConstraints, canonicalGoals, mapCanonicalToRules } from "@/lib/canonical/map";
+import { PROFILE_VERSION_NUMBER } from "@/lib/canonical/types";
 
 export async function ensureSeeded(): Promise<void> {
   const existing = await getProfile();
   if (!existing) {
+    const canonical = loadCanonicalProfile();
     await saveProfile({
-      goals: SAMPLE_GOALS,
-      constraints: SAMPLE_CONSTRAINTS,
+      goals: canonicalGoals(canonical),
+      constraints: canonicalConstraints(canonical),
       weights: SAMPLE_WEIGHTS,
       bullets: SAMPLE_BULLETS,
+    });
+  } else if (existing.goals === SAMPLE_GOALS) {
+    const canonical = loadCanonicalProfile();
+    await saveProfile({
+      goals: canonicalGoals(canonical),
+      constraints: canonicalConstraints(canonical),
+      weights: existing.weights,
+      bullets: existing.bullets,
     });
   }
 
@@ -77,8 +88,8 @@ export async function ensureLayerTwo(): Promise<void> {
   if (!profile) return;
 
   const rules = await getCandidateRules();
-  if (!rules || rules.targetRoles.length === 0) {
-    await saveCandidateRules({ ...DEFAULT_CANDIDATE_PROFILE, version: 1 });
+  if (!rules || rules.targetRoles.length === 0 || rules.version < PROFILE_VERSION_NUMBER) {
+    await saveCandidateRules(mapCanonicalToRules(loadCanonicalProfile()));
   } else {
     await saveCandidateRules(rules);
   }

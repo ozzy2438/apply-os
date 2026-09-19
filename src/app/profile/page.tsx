@@ -3,6 +3,7 @@ import { bootApp } from "@/lib/boot";
 import { getProfile } from "@/lib/db/store";
 import { getCandidateRules } from "@/lib/db/store-extended";
 import { BULLET_KINDS, DIMENSION_IDS } from "@/lib/jev/types";
+import { profileSummary } from "@/lib/canonical/summary";
 
 export const dynamic = "force-dynamic";
 
@@ -13,13 +14,46 @@ export default async function ProfilePage() {
   if (!profile) return <p>No profile.</p>;
 
   const extraSlots = 2;
+  const summary = profileSummary();
 
   return (
     <main className="max-w-3xl">
       <h2 className="mb-1 text-xl text-paper">Profile</h2>
       <p className="mb-6 text-sm text-mute">
-        Changing weights recomposes stored Jev answers in code. It does not call the model again.
+        Canonical career profile {summary.schemaVersion} is the source of truth. Weights still recompose stored Jev answers in code.
       </p>
+      <section className="mb-6 grid gap-3 border border-line bg-panel p-4 md:grid-cols-2">
+        <p className="font-mono text-[10px] uppercase text-brass md:col-span-2">Canonical summary</p>
+        <p className="text-sm text-paper">{summary.fullName} · {summary.workRights}</p>
+        <p className="text-sm text-paper">{summary.location} · {summary.workModes.join(" / ")}</p>
+        <p className="text-sm text-paper">{summary.compensationStatus}</p>
+        <p className="text-sm text-paper">
+          {summary.skills} skills · {summary.projects} projects · {summary.evidence} evidence
+        </p>
+        <div className="md:col-span-2">
+          <p className="mb-1 font-mono text-[10px] uppercase text-brass">Active discovery families</p>
+          <p className="text-sm text-paper">
+            {summary.discoveryFamilies.filter((f) => f.enabled).map((f) => f.label).join(" · ") || "None enabled"}
+          </p>
+          <p className="mt-1 text-xs text-mute">
+            Capability families stay in the library even when discovery is off. Toggle lives in decision-policy.json.
+          </p>
+        </div>
+        <div className="md:col-span-2">
+          <p className="mb-1 font-mono text-[10px] uppercase text-brass">Claim safety</p>
+          <p className="text-sm text-paper">
+            {summary.claimSafety.forbidden} forbidden · {summary.claimSafety.notCurrentlyEvidenced} not currently evidenced ·{" "}
+            {summary.claimSafety.qualified} qualified · P02 {summary.claimSafety.p02Excluded ? "excluded" : "review"}
+          </p>
+          {summary.unresolvedReviewFlags.length ? (
+            <ul className="mt-2 list-disc pl-5 text-xs text-mute">
+              {summary.unresolvedReviewFlags.slice(0, 4).map((flag) => (
+                <li key={flag}>{flag}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      </section>
       <form action={saveProfileAction} className="space-y-6 border border-line bg-panel p-5">
         <label className="block font-mono text-xs text-mute">
           Goals

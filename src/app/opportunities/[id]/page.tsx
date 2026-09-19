@@ -90,6 +90,14 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
       {v2 ? (
         <section className="border border-line bg-panel p-4">
           <h3 className="mb-2 font-mono text-xs uppercase text-brass">Structured explanation</h3>
+          {v2.triage ? (
+            <p className="mb-2 font-mono text-[10px] uppercase text-brass">
+              Triage {v2.triage} · roleFit {pct(v2.roleFit ?? v2.semanticSignals.roleFitScore)} · coverage{" "}
+              {pct(v2.evidenceCoverage ?? v2.semanticSignals.skillsFitScore)} · completeness{" "}
+              {pct(v2.informationCompleteness ?? 1 - v2.semanticSignals.missingInformationProbability)} · decision{" "}
+              {pct(v2.decisionConfidence ?? v2.semanticSignals.recommendationConfidence)}
+            </p>
+          ) : null}
           <pre className="whitespace-pre-wrap text-sm text-paper">{explanationFromEvaluation(v2)}</pre>
           {v2.deterministicResults.hardBlockers.length ? (
             <ul className="mt-3 list-disc pl-5 text-sm text-clay">

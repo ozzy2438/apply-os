@@ -1,0 +1,1558 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://applyos.local/schemas/candidate-profile.schema.json",
+  "title": "Apply OS Canonical Candidate Profile",
+  "description": "Machine-readable canonical career profile used by Apply OS as its source of truth. Schema 1.1.0: evidence is subject-referenced (project, experience, education, certification, candidate_fact). Holds the full project evidence library, not a CV.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "candidate",
+    "career_objectives",
+    "role_targets",
+    "constraints",
+    "skills",
+    "experience",
+    "projects",
+    "education",
+    "certifications",
+    "evidence",
+    "claim_policy",
+    "preferences",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "candidate": {
+      "$ref": "#/$defs/candidate"
+    },
+    "career_objectives": {
+      "$ref": "#/$defs/career_objectives"
+    },
+    "role_targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/role_target"
+      }
+    },
+    "constraints": {
+      "$ref": "#/$defs/constraints"
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/skill"
+      }
+    },
+    "experience": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/experience_entry"
+      }
+    },
+    "projects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/project"
+      }
+    },
+    "education": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/education_entry"
+      }
+    },
+    "certifications": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/certification"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Canonical evidence registry. Every evidence_id referenced anywhere in the document must resolve to exactly one record here.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence_record"
+      }
+    },
+    "claim_policy": {
+      "$ref": "#/$defs/claim_policy"
+    },
+    "preferences": {
+      "$ref": "#/$defs/preferences"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "evidence_strength": {
+      "type": "string",
+      "description": "verified = confirmed by a third party outside the candidate's own material. documented = stated in source material and tied to a durable artefact (public repository, named test suite, reconciliation record). self_reported = stated in source material with no external artefact. uncertain = internally inconsistent, implausible, or contradicted across sources.",
+      "enum": [
+        "verified",
+        "documented",
+        "self_reported",
+        "uncertain"
+      ]
+    },
+    "engagement_type": {
+      "type": "string",
+      "description": "contract = paid client engagement explicitly labelled as a contract in source. freelance = paid client engagement explicitly labelled freelance. independent = self-directed build, including simulated or 'consultancy-style' briefs with no real client. portfolio = self-directed build published as a public portfolio piece. employment = salaried employment. unknown = source material does not state the engagement basis; must not be presented as client work.",
+      "enum": [
+        "contract",
+        "freelance",
+        "independent",
+        "portfolio",
+        "employment",
+        "unknown"
+      ]
+    },
+    "role_family_name": {
+      "type": "string",
+      "enum": [
+        "Data Scientist",
+        "Machine Learning Engineer",
+        "AI Engineer",
+        "MLOps Engineer",
+        "Data Analyst / Insights Analyst",
+        "Analytics Engineer",
+        "Data Engineer / Cloud Data",
+        "Data Quality / Data Governance",
+        "AI Solution Architecture",
+        "BI / Reporting Developer"
+      ]
+    },
+    "id_project": {
+      "type": "string",
+      "pattern": "^P[0-9]{2}$"
+    },
+    "id_skill": {
+      "type": "string",
+      "pattern": "^SK-[a-z0-9-]+$"
+    },
+    "id_evidence": {
+      "type": "string",
+      "pattern": "^EV-[A-Z0-9]+-[0-9]{2}$",
+      "description": "Existing project evidence IDs keep the EV-Pnn-nn form. Future non-project evidence may use EV-EXP-nn, EV-EDU-nn, EV-CERT-nn, EV-FACT-nn."
+    },
+    "id_experience": {
+      "type": "string",
+      "pattern": "^EXP-[0-9]{2}$"
+    },
+    "date_partial": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "ISO-8601 date, year-month, or year. Null where the source does not state a date. Never inferred.",
+      "pattern": "^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$"
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "full_name",
+        "location",
+        "work_rights",
+        "contact",
+        "links"
+      ],
+      "properties": {
+        "full_name": {
+          "type": "string"
+        },
+        "preferred_name": {
+          "type": "string"
+        },
+        "location": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "city",
+            "state",
+            "country"
+          ],
+          "properties": {
+            "city": {
+              "type": "string"
+            },
+            "suburb": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string"
+            },
+            "country": {
+              "type": "string"
+            },
+            "timezone": {
+              "type": "string"
+            }
+          }
+        },
+        "work_rights": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "requires_sponsorship"
+          ],
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "requires_sponsorship": {
+              "type": "boolean"
+            },
+            "restrictions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "contact": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "email": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            }
+          }
+        },
+        "links": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "linkedin": {
+              "type": "string"
+            },
+            "github": {
+              "type": "string"
+            },
+            "portfolio": {
+              "type": "string"
+            }
+          }
+        },
+        "professional_summary": {
+          "type": "string"
+        },
+        "years_experience": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "independent_delivery_since": {
+              "$ref": "#/$defs/date_partial"
+            },
+            "total_data_career_since": {
+              "$ref": "#/$defs/date_partial"
+            },
+            "notes": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "career_objectives": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primary_objective": {
+          "type": "string"
+        },
+        "motivations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "work_type_sought": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deliberate_differentiators": {
+          "type": "array",
+          "description": "Factual capability signals only. Ranking and application strategy live in decision-policy.json.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "role_target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role_family_id",
+        "role_family",
+        "priority",
+        "acceptable_titles",
+        "core_requirements",
+        "supporting_skill_ids",
+        "supporting_project_ids"
+      ],
+      "properties": {
+        "role_family_id": {
+          "$ref": "#/$defs/role_family_id"
+        },
+        "role_family": {
+          "$ref": "#/$defs/role_family_name"
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "secondary",
+            "adjacent"
+          ]
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "acceptable_titles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "avoid_titles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "core_requirements": {
+          "type": "array",
+          "description": "What a posting in this family typically demands, and whether this candidate meets it.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requirement",
+              "candidate_position"
+            ],
+            "properties": {
+              "requirement": {
+                "type": "string"
+              },
+              "candidate_position": {
+                "type": "string",
+                "enum": [
+                  "strong",
+                  "adequate",
+                  "partial",
+                  "gap",
+                  "uncertain"
+                ]
+              },
+              "supporting_project_ids": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/id_project"
+                }
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "known_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supporting_skill_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id_skill"
+          }
+        },
+        "supporting_project_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id_project"
+          }
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "work_rights",
+        "hard_blockers",
+        "soft_preferences"
+      ],
+      "properties": {
+        "work_rights": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "country": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "sponsorship_required": {
+              "type": "boolean"
+            }
+          }
+        },
+        "locations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "base": {
+              "type": "string"
+            },
+            "preferred": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "acceptable": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "unacceptable": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "max_commute_notes": {
+              "type": "string"
+            }
+          }
+        },
+        "work_modes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preferred": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "acceptable": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "unacceptable": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "compensation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "currency": {
+              "type": "string"
+            },
+            "floor_known": {
+              "type": "boolean"
+            },
+            "annual_floor": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "observed_target_range": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        },
+        "seniority": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "target_levels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "excluded_levels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        },
+        "employment_basis": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "acceptable": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        },
+        "hard_blockers": {
+          "type": "array",
+          "description": "A posting matching any of these is a genuine reject. Keep this list short.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "blocker",
+              "reason"
+            ],
+            "properties": {
+              "blocker": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "soft_preferences": {
+          "type": "array",
+          "description": "Reduce desirability. Must never on their own cause a rejection.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "preference",
+              "direction"
+            ],
+            "properties": {
+              "preference": {
+                "type": "string"
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "prefer",
+                  "avoid"
+                ]
+              },
+              "weight_hint": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "skill_id",
+        "name",
+        "category",
+        "strength",
+        "evidence_ids",
+        "project_ids",
+        "commercial_evidence"
+      ],
+      "properties": {
+        "skill_id": {
+          "$ref": "#/$defs/id_skill"
+        },
+        "name": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "category": {
+          "type": "string"
+        },
+        "strength": {
+          "type": "string",
+          "description": "strong = repeated substantial use across several pieces of work. working = used with concrete detail in at least one. exposure = named but thinly evidenced. uncertain = cannot be placed from source material.",
+          "enum": [
+            "strong",
+            "working",
+            "exposure",
+            "uncertain"
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id_evidence"
+          }
+        },
+        "project_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id_project"
+          }
+        },
+        "commercial_evidence": {
+          "description": "true where at least one supporting project is a paid client engagement (contract or freelance). false where all supporting work is independent or portfolio. \"unknown\" where engagement basis is unstated.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "unknown"
+              ]
+            }
+          ]
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "experience_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "experience_id",
+        "organisation",
+        "engagement_type",
+        "role_title",
+        "start_date",
+        "end_date"
+      ],
+      "properties": {
+        "experience_id": {
+          "$ref": "#/$defs/id_experience"
+        },
+        "organisation": {
+          "type": "string"
+        },
+        "organisation_named_publicly": {
+          "type": "boolean"
+        },
+        "context": {
+          "type": "string"
+        },
+        "engagement_type": {
+          "$ref": "#/$defs/engagement_type"
+        },
+        "role_title": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "start_date": {
+          "$ref": "#/$defs/date_partial"
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/date_partial"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "present"
+              ]
+            }
+          ]
+        },
+        "responsibilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outcomes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcome"
+          }
+        },
+        "project_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id_project"
+          }
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id_evidence"
+          }
+        },
+        "referenceable": {
+          "type": "string",
+          "enum": [
+            "yes",
+            "no",
+            "unknown"
+          ],
+          "description": "Whether a named referee could plausibly be offered for this entry."
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "statement",
+        "evidence_strength"
+      ],
+      "properties": {
+        "statement": {
+          "type": "string"
+        },
+        "metric": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metric_value": {
+          "type": [
+            "string",
+            "number",
+            "null"
+          ]
+        },
+        "measurement_context": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Where the number comes from: real client production, held-out test set, controlled/reference scenario, synthetic data, simulation, or pilot. Decisive for whether the number may be presented as a business outcome.",
+          "enum": [
+            "client_production",
+            "client_delivery",
+            "held_out_evaluation",
+            "controlled_validation",
+            "backtest_or_simulation",
+            "synthetic_data",
+            "public_data_analysis",
+            "modelled_scenario",
+            "unstated",
+            null
+          ]
+        },
+        "evidence_strength": {
+          "$ref": "#/$defs/evidence_strength"
+        }
+      }
+    },
+    "evidence_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "subject",
+        "claim",
+        "source_text",
+        "source_document",
+        "evidence_strength"
+      ],
+      "properties": {
+        "evidence_id": {
+          "$ref": "#/$defs/id_evidence"
+        },
+        "subject": {
+          "$ref": "#/$defs/evidence_subject"
+        },
+        "claim": {
+          "type": "string"
+        },
+        "source_text": {
+          "type": "string",
+          "description": "Verbatim or near-verbatim excerpt from the source document. Never paraphrased upward."
+        },
+        "source_document": {
+          "type": "string"
+        },
+        "source_locator": {
+          "type": "string"
+        },
+        "evidence_strength": {
+          "$ref": "#/$defs/evidence_strength"
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_id",
+        "name",
+        "engagement_type",
+        "client_or_context",
+        "confidential",
+        "domains",
+        "role_families_supported",
+        "business_problem",
+        "objective",
+        "technologies",
+        "methods",
+        "responsibilities",
+        "deliverables",
+        "outcomes",
+        "cv_bullets",
+        "capabilities_demonstrated",
+        "evidence_ids",
+        "allowed_claims",
+        "claim_boundaries",
+        "keywords"
+      ],
+      "properties": {
+        "project_id": {
+          "$ref": "#/$defs/id_project"
+        },
+        "source_index": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "engagement_type": {
+          "$ref": "#/$defs/engagement_type"
+        },
+        "engagement_type_certainty": {
+          "type": "string",
+          "enum": [
+            "stated_in_source",
+            "inferred_from_wording",
+            "not_stated"
+          ],
+          "description": "How the engagement_type was determined. Anything other than stated_in_source must be resolved with the candidate before the project is presented as client work."
+        },
+        "client_or_context": {
+          "type": "string"
+        },
+        "confidential": {
+          "type": "boolean"
+        },
+        "team_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "worked_in_team": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "unknown"
+                  ]
+                }
+              ]
+            },
+            "team_size": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "team_composition": {
+              "type": "string"
+            },
+            "candidate_role_in_team": {
+              "type": "string"
+            }
+          }
+        },
+        "start_date": {
+          "$ref": "#/$defs/date_partial"
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/date_partial"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "present"
+              ]
+            }
+          ]
+        },
+        "date_certainty": {
+          "type": "string",
+          "enum": [
+            "stated_in_source",
+            "not_stated"
+          ]
+        },
+        "location_mode": {
+          "type": "string"
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "role_families_supported": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/role_family_name"
+          }
+        },
+        "business_problem": {
+          "type": "string"
+        },
+        "objective": {
+          "type": "string"
+        },
+        "technologies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "data_platforms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cloud_platforms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "data_sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "responsibilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deliverables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outcomes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcome"
+          }
+        },
+        "cv_bullets": {
+          "type": "array",
+          "description": "Strongest bullets preserved from source material, at the level of responsibility stated in source. Never escalated.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "capabilities_demonstrated": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id_evidence"
+          }
+        },
+        "repository": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "allowed_claims": {
+          "type": "array",
+          "description": "Statements Apply OS may assemble from this project without qualification.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "claim_boundaries": {
+          "type": "array",
+          "description": "Statements Apply OS must never make from this project, and qualifications that must travel with it.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "related_project_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id_project"
+          }
+        },
+        "review_flags": {
+          "type": "array",
+          "description": "Open questions requiring the candidate's confirmation before this project is used in an application.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cv_usage": {
+          "type": "string",
+          "enum": [
+            "preferred",
+            "standard",
+            "supporting",
+            "restricted",
+            "excluded"
+          ],
+          "description": "excluded = must never appear on a CV. restricted = only with its claim_boundaries attached."
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "role_family_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/role_family_id"
+          }
+        }
+      }
+    },
+    "education_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "qualification",
+        "provider",
+        "status"
+      ],
+      "properties": {
+        "qualification": {
+          "type": "string"
+        },
+        "qualification_title_verified": {
+          "type": "boolean",
+          "description": "False where the exact award title differs across source documents and has not been checked against the testamur."
+        },
+        "alternate_titles_seen": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "provider": {
+          "type": "string"
+        },
+        "field": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "in_progress",
+            "incomplete",
+            "unknown"
+          ]
+        },
+        "start_date": {
+          "$ref": "#/$defs/date_partial"
+        },
+        "end_date": {
+          "$ref": "#/$defs/date_partial"
+        },
+        "credential_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "review_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "certification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "provider",
+        "achievement_status",
+        "current_validity"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "field": {
+          "type": "string"
+        },
+        "issued_date": {
+          "$ref": "#/$defs/date_partial"
+        },
+        "expiry_date": {
+          "$ref": "#/$defs/date_partial"
+        },
+        "credential_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "review_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "achievement_status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "in_progress",
+            "unknown"
+          ]
+        },
+        "current_validity": {
+          "type": "string",
+          "enum": [
+            "valid",
+            "expired",
+            "not_applicable",
+            "unverified"
+          ],
+          "description": "Completion does not imply current validity. Unverified when expiry is unknown."
+        }
+      }
+    },
+    "claim_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "principles",
+        "supported_claims",
+        "qualified_claims",
+        "forbidden_claims",
+        "not_currently_evidenced",
+        "boundaries",
+        "uncertain_facts"
+      ],
+      "properties": {
+        "principles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supported_claims": {
+          "type": "array",
+          "description": "May be asserted without qualification.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "claim",
+              "basis"
+            ],
+            "properties": {
+              "claim": {
+                "type": "string"
+              },
+              "basis": {
+                "type": "string"
+              },
+              "project_ids": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/id_project"
+                }
+              }
+            }
+          }
+        },
+        "qualified_claims": {
+          "type": "array",
+          "description": "May be asserted only with the stated qualification attached.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "claim",
+              "required_qualification"
+            ],
+            "properties": {
+              "claim": {
+                "type": "string"
+              },
+              "required_qualification": {
+                "type": "string"
+              },
+              "project_ids": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/id_project"
+                }
+              }
+            }
+          }
+        },
+        "boundaries": {
+          "type": "array",
+          "description": "Named distinctions Apply OS must preserve when assembling any application material.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "boundary",
+              "rule"
+            ],
+            "properties": {
+              "boundary": {
+                "type": "string"
+              },
+              "rule": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "uncertain_facts": {
+          "type": "array",
+          "description": "Open items requiring human review before use.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "item",
+              "why_uncertain",
+              "resolution_required"
+            ],
+            "properties": {
+              "item": {
+                "type": "string"
+              },
+              "why_uncertain": {
+                "type": "string"
+              },
+              "resolution_required": {
+                "type": "string"
+              },
+              "affects": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              }
+            }
+          }
+        },
+        "forbidden_claims": {
+          "type": "array",
+          "description": "Must never be claimed from current evidence, in any wording.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "claim",
+              "reason"
+            ],
+            "properties": {
+              "claim": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "not_currently_evidenced": {
+          "type": "array",
+          "description": "Current skill or evidence gap. Not permanently forbidden; may become supported later.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "claim",
+              "reason"
+            ],
+            "properties": {
+              "claim": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cv_format": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "labelling_rules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "language": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "application_materials": {
+              "type": "string"
+            },
+            "spelling": {
+              "type": "string"
+            },
+            "working_language": {
+              "type": "string"
+            }
+          }
+        },
+        "application_strategy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "avoid": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generated_at",
+        "sources",
+        "method",
+        "known_limitations"
+      ],
+      "properties": {
+        "generated_at": {
+          "type": "string"
+        },
+        "generated_by": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "document",
+              "role"
+            ],
+            "properties": {
+              "document": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "primary",
+                  "corroborating",
+                  "superseded",
+                  "contextual"
+                ]
+              },
+              "sha256": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "pages": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "method": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "known_limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reconciliation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "projects_discovered": {
+              "type": "integer"
+            },
+            "projects_represented": {
+              "type": "integer"
+            },
+            "evidence_records": {
+              "type": "integer"
+            },
+            "skills_represented": {
+              "type": "integer"
+            },
+            "uncertain_facts": {
+              "type": "integer"
+            },
+            "notes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "role_family_id": {
+      "type": "string",
+      "enum": [
+        "ai_engineering",
+        "machine_learning_engineering",
+        "mlops_engineering",
+        "data_science",
+        "data_engineering_cloud",
+        "analytics_engineering",
+        "data_quality_governance",
+        "data_analytics_insights",
+        "ai_solution_architecture",
+        "bi_reporting"
+      ]
+    },
+    "evidence_subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "project",
+            "experience",
+            "education",
+            "certification",
+            "candidate_fact"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

@@ -130,6 +130,23 @@ export const semanticSignalsSchema = z.object({
   recommendationConfidence: z.number(),
 });
 
+export const jobRequirementSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  category: z.string(),
+  importance: z.enum(["MUST", "SHOULD", "NICE"]),
+  sourceSpan: z.string().nullable(),
+  extractionConfidence: z.number().min(0).max(1),
+});
+
+export const evidenceMatchSchema = z.object({
+  requirementId: z.string(),
+  evidenceIds: z.array(z.string()),
+  projectIds: z.array(z.string()),
+  support: z.enum(["SUPPORTED", "PARTIAL", "UNSUPPORTED", "UNKNOWN"]),
+  confidence: z.number().min(0).max(1),
+});
+
 export const jobEvaluationSchema = z.object({
   id: z.string(),
   jobId: z.string(),
@@ -141,6 +158,17 @@ export const jobEvaluationSchema = z.object({
   finalDecision: z.enum(RECOMMENDATIONS),
   explanationReasons: z.array(z.string()),
   evaluatedAt: z.string(),
+  triage: z.enum(["HARD_REJECT", "LOW_PRIORITY_ARCHIVE", "DEEP_REVIEW", "HUMAN_REVIEW"]).optional(),
+  candidateProfileVersionLabel: z.string().optional(),
+  decisionPolicyVersion: z.string().optional(),
+  jobInputHash: z.string().optional(),
+  evaluationSchemaVersion: z.string().optional(),
+  jevModelVersion: z.string().nullable().optional(),
+  roleFit: z.number().optional(),
+  evidenceCoverage: z.number().optional(),
+  informationCompleteness: z.number().optional(),
+  decisionConfidence: z.number().optional(),
+  priorityScore: z.number().optional(),
 });
 
 export const atomicClaimSchema = z.object({
@@ -197,6 +225,8 @@ export type CandidateProfile = z.infer<typeof candidateProfileSchema>;
 export type CandidateEvidence = z.infer<typeof candidateEvidenceSchema>;
 export type JobPosting = z.infer<typeof jobPostingSchema>;
 export type JobEvaluation = z.infer<typeof jobEvaluationSchema>;
+export type JobRequirement = z.infer<typeof jobRequirementSchema>;
+export type EvidenceMatch = z.infer<typeof evidenceMatchSchema>;
 export type DeterministicResults = z.infer<typeof deterministicResultsSchema>;
 export type SemanticSignals = z.infer<typeof semanticSignalsSchema>;
 export type AtomicClaim = z.infer<typeof atomicClaimSchema>;

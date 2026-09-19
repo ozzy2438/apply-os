@@ -10,6 +10,9 @@ import { evidenceFromBullets } from "@/lib/policy/evidence";
 import { getDecisionProvider } from "@/lib/providers/factory";
 import type { CandidateEvidence, JobPosting } from "@/lib/domain/schemas";
 import { normalizeJobPosting } from "@/lib/ingest/normalize";
+import { scanClaimSafety } from "@/lib/canonical/claims";
+import { loadCanonicalProfile } from "@/lib/canonical/load";
+import { isApplicationExcludedProject } from "@/lib/canonical/claims";
 
 function fallbackJob(profile: Profile): JobPosting {
   return normalizeJobPosting({
@@ -59,7 +62,9 @@ export async function checkCoverLetter(input: {
   );
 
   const base = composeCoverLetterCheck(citations, guards);
-  const evidence = input.evidence ?? evidenceFromBullets(input.profile.bullets);
+  const evidence = (input.evidence ?? evidenceFromBullets(input.profile.bullets)).filter(
+    (e) => !isApplicationExcludedProject(e.sourceReference),
+  );
   const job = input.job ?? fallbackJob(input.profile);
   const provider = getDecisionProvider();
   const atoms = extractAtomicClaims(input.body, input.claims);
@@ -87,11 +92,18 @@ export async function checkCoverLetter(input: {
     true,
   );
 
-  const blockers = [...base.blockers, ...extra.blockers];
+  let profile;
+  try {
+    profile = loadCanonicalProfile();
+  } catch {
+    profile = undefined;
+  }
+  const safety = scanClaimSafety(`${input.body}\n${input.claims.map((c) => c.claim).join("\n")}`, profile);
+  const blockers = [...base.blockers, ...extra.blockers, ...safety];
   return {
     ...base,
     atomic,
     blockers,
-    ready: base.ready && extra.ready,
+    ready: base.ready && extra.ready && safety.length === 0,
   };
 }
