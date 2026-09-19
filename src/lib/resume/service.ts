@@ -169,7 +169,7 @@ export async function buildResumeForJob(jobId: string, userRequested: boolean): 
 
   let draft = result.draft;
   let guard = result.guard;
-  let review = result.review;
+  const review = result.review;
   const warnings = [...policyWarnings, ...result.warnings, ...pendingReview.slice(0, 8).map((p) => `${p.id}: ${p.reason}`)];
   let rendered = draft && guard?.passed ? renderResume(context, result.plan, draft, policy) : null;
   let measured = rendered

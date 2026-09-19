@@ -11,7 +11,8 @@ export function canonical(value: unknown): string {
 }
 export function hash(value: unknown): string { return createHash("sha256").update(canonical(value)).digest("hex"); }
 export function claimHash(claim: ClaimCard): string {
-  const { approval: _approval, ...payload } = claim;
+  const { approval, ...payload } = claim;
+  void approval;
   return hash(payload);
 }
 export function contextHash(ctx: ResumeContext): string { return hash(ctx); }

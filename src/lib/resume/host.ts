@@ -1,9 +1,9 @@
 import { score } from "@typesafe-ai/sdk";
 import OpenAI from "openai";
 import { getJevRuntime, isDemoMode } from "@/lib/jev/client";
-import type { ResumeContext, ResumeDraft, ResumePlan, ResumePolicy, ReviewResult, WriterPort } from "./types";
+import type { ResumeContext, ResumePlan, ResumePolicy, ReviewResult, WriterPort } from "./types";
 import { makeJevReviewer, type JevRunner } from "./jev-adapter";
-import { WRITER_INSTRUCTIONS, templateWriter, writerState } from "./writer";
+import { WRITER_INSTRUCTIONS, templateWriter } from "./writer";
 import { parseDraft } from "./validation";
 
 const WRITER_REVISION = "apply-os-writer-1.0.0";

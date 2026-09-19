@@ -208,8 +208,9 @@ export function heuristicGuards(letter: string, cv: string): Record<"inflated_te
 
 export async function mockSystemOne<Q extends Questions>(
   request: SystemOneRequest<Q>,
-  _options?: unknown,
+  options?: unknown,
 ): Promise<SystemOneResult<Q>> {
+  void options;
   const state = request.state as EvaluationState | Record<string, unknown> | string;
   const names = Object.keys(request.questions);
   const answers: Record<string, unknown> = {};
