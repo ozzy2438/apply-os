@@ -99,3 +99,34 @@ export function OpportunityCard({
     </Link>
   );
 }
+
+import type { DeskDiscoveryFacts } from "@/lib/discovery/desk";
+
+export function DiscoveryFactsStrip(facts: DeskDiscoveryFacts) {
+  return (
+    <div className="border border-line bg-panel-2 p-3 font-mono text-[11px] text-mute">
+      <p className="uppercase text-brass">
+        {facts.mock ? "MOCK discovery" : facts.live ? "Live discovery" : "Discovery"} ·{" "}
+        {facts.providers.join(" · ") || "provider"} ·{" "}
+        {facts.ageDays == null ? "freshness unknown" : `${Math.max(0, Math.round(facts.ageDays))}d old`}
+      </p>
+      <p className="mt-1 text-paper">
+        Role Fit {facts.roleFit == null ? "n/a" : pct(facts.roleFit)} · evidence{" "}
+        {facts.evidenceCoverage == null ? "n/a" : pct(facts.evidenceCoverage)} · {facts.decision ?? "unevaluated"}
+      </p>
+      <p className="mt-1">Not a hiring probability.</p>
+      {facts.gaps.length ? <p className="mt-1">Gaps: {facts.gaps.join(" ")}</p> : null}
+      <ul className="mt-2 list-disc pl-4">
+        {facts.why.slice(0, 5).map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+      {facts.sourceUrls[0] ? (
+        <p className="mt-2 truncate">
+          Source {facts.sourceUrls[0]}
+          {facts.sourceUrls.length > 1 ? ` · +${facts.sourceUrls.length - 1} provenance URLs` : ""}
+        </p>
+      ) : null}
+    </div>
+  );
+}

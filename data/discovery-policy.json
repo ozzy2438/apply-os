@@ -1,0 +1,17 @@
+{
+  "config_version": "1.0.0",
+  "freshness_days": 7,
+  "hydrate_min_chars": 400,
+  "max_results_per_query": 12,
+  "include_australia_remote": true,
+  "cheap_filter": {
+    "drop_unusable": true,
+    "avoid_title_drop": true
+  },
+  "providers": {
+    "exa": { "enabled": true, "role": "primary_search" },
+    "feeds": { "enabled": true, "role": "first_party" },
+    "playwright_hydrate": { "enabled": true, "role": "hydrate_fallback" },
+    "apify": { "enabled": false, "role": "optional_future" }
+  }
+}

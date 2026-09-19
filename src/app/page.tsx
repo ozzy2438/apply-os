@@ -3,11 +3,12 @@ import { ensureTodayBriefing } from "@/lib/briefing-service";
 import { formatMelbourne } from "@/lib/time";
 import { getBriefing, getOpportunity, latestEvaluation, listOpportunities, listLatestEvaluations } from "@/lib/db/store";
 import { latestJobEvaluationV2 } from "@/lib/db/store-extended";
-import { OpportunityCard } from "@/components/Decision";
+import { DiscoveryFactsStrip, OpportunityCard } from "@/components/Decision";
 import { refreshBriefingAction } from "@/app/actions";
 import { briefingDate, selectMorningDesk } from "@/lib/jev/briefing";
 import Link from "next/link";
 import { explanationFromEvaluation } from "@/lib/policy/compose";
+import { deskDiscoveryFacts, discoveryFactsForJob } from "@/lib/discovery";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +23,13 @@ export default async function MorningDeskPage() {
     const opportunity = await getOpportunity(id);
     const evaluation = await latestEvaluation(id);
     const v2 = await latestJobEvaluationV2(id);
+    const discovery = await discoveryFactsForJob(id);
+    const facts = deskDiscoveryFacts(discovery, v2 ?? null);
     if (opportunity && evaluation) {
-      cards.push({ opportunity, composed: evaluation.composed, v2 });
+      cards.push({ opportunity, composed: evaluation.composed, v2, facts });
     }
   }
+
 
   const opps = await listOpportunities();
   const evals = await listLatestEvaluations();
@@ -71,7 +75,8 @@ export default async function MorningDeskPage() {
       {cards.length === 0 ? (
         <div className="border border-line bg-panel p-8 text-sm text-mute">
           No desk-eligible roles today ({eligibleCount} currently eligible after filters). Ingest a posting or
-          start a read-only discovery session.
+          start a read-only discovery session. Provider discovery feeds only triaged shortlist roles here —
+          not raw search hits.
         </div>
       ) : (
         <div className="grid gap-3">
@@ -82,6 +87,7 @@ export default async function MorningDeskPage() {
                 composed={card.composed}
                 href={`/opportunities/${card.opportunity.id}`}
               />
+              {card.facts ? <DiscoveryFactsStrip {...card.facts} /> : null}
               {card.v2 ? (
                 <pre className="whitespace-pre-wrap border border-line bg-panel-2 p-3 font-mono text-[11px] text-mute">
                   {explanationFromEvaluation(card.v2)}

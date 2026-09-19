@@ -91,3 +91,36 @@ export const statusEvents = sqliteTable("status_events", {
   note: text("note"),
   at: text("at").notNull(),
 });
+
+export const discoveryRuns = sqliteTable("discovery_runs", {
+  id: text("id").primaryKey(),
+  configVersion: text("config_version").notNull(),
+  queryJson: text("query_json").notNull(),
+  providerIdsJson: text("provider_ids_json").notNull(),
+  live: integer("live").notNull(),
+  status: text("status").notNull(),
+  summaryJson: text("summary_json").notNull(),
+  candidateProfileVersion: text("candidate_profile_version"),
+  decisionPolicyVersion: text("decision_policy_version"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const discoveryItems = sqliteTable("discovery_items", {
+  id: text("id").primaryKey(),
+  runId: text("run_id").notNull(),
+  clusterId: text("cluster_id").notNull(),
+  opportunityId: text("opportunity_id"),
+  stage: text("stage").notNull(),
+  triageBucket: text("triage_bucket"),
+  providerId: text("provider_id").notNull(),
+  live: integer("live").notNull(),
+  title: text("title"),
+  company: text("company"),
+  location: text("location"),
+  canonicalUrl: text("canonical_url"),
+  sourceUrlsJson: text("source_urls_json").notNull(),
+  contentHash: text("content_hash"),
+  normalizedJson: text("normalized_json").notNull(),
+  provenanceJson: text("provenance_json").notNull(),
+  createdAt: text("created_at").notNull(),
+});

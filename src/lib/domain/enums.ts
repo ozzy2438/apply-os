@@ -88,6 +88,9 @@ export const AUDIT_EVENTS = [
   "RESUME_APPROVED",
   "RESUME_EXISTING_REVIEWED",
   "RESUME_INTENT",
+  "DISCOVERY_RUN",
+  "DISCOVERY_ITEM_TRIAGED",
+  "DISCOVERY_HYDRATED",
 ] as const;
 export type AuditEventType = (typeof AUDIT_EVENTS)[number];
 

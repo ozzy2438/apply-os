@@ -4,8 +4,10 @@ import { observeDemoPage } from "@/lib/browser/demo-board";
 import { buildActionSpace } from "@/lib/browser/action-space";
 import { getDecisionProvider } from "@/lib/providers/factory";
 import { browserModeLabel } from "@/lib/browser/flags";
-import { startDiscoverySession, stepDiscovery, stopDiscovery } from "./actions";
+import { runProviderDiscoveryAction, startDiscoverySession, stepDiscovery, stopDiscovery } from "./actions";
 import { profileSummary } from "@/lib/canonical/summary";
+import { discoveryEnabled, discoveryModeLabel, exaEnabled, latestDiscoveryRun, listDiscoveryItems } from "@/lib/discovery";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,10 @@ export default async function DiscoverPage({
   const { session: sessionId } = await searchParams;
   const session = sessionId ? await getBrowserSession(sessionId) : null;
   const mode = browserModeLabel();
+  const discoveryOn = discoveryEnabled();
+  const lastRun = discoveryOn ? await latestDiscoveryRun() : null;
+  const lastItems = lastRun ? await listDiscoveryItems(lastRun.id) : [];
+  const liveExa = exaEnabled();
 
   let observation = null;
   let space = null;
@@ -44,23 +50,76 @@ export default async function DiscoverPage({
       <div>
         <h2 className="text-xl text-paper">Job Discovery Assistant</h2>
         <p className="max-w-2xl text-sm text-mute">
-          An assistant, not an autonomous applicant. Read-only discovery first. Apply, message, upload, and
-          payments never run without a just-in-time confirmation — and demo mode never opens a real browser.
+          An assistant, not an autonomous applicant. Provider search (Exa first) returns lightweight
+          metadata, then Apply OS triage decides what is worth hydrating. Apply, message, upload, and
+          payments never run from discovery.
         </p>
-        <p className="mt-2 font-mono text-[10px] uppercase text-brass">Mode · {mode.replaceAll("-", " ")}</p>
+        <p className="mt-2 font-mono text-[10px] uppercase text-brass">
+          Browser · {mode.replaceAll("-", " ")} · Provider discovery · {discoveryModeLabel()}
+        </p>
         <p className="mt-2 text-sm text-paper">
           Discovery targets:{" "}
           {summary.discoveryFamilies.filter((f) => f.enabled).map((f) => f.label).join(" · ") || "none enabled"}
         </p>
         <p className="text-xs text-mute">
-          Secondary and adjacent families remain in the capability library with discovery off.
+          Secondary and adjacent families remain in the capability library with discovery off. Default
+          freshness is 7 days.
         </p>
       </div>
 
       <section className="border border-line bg-panel p-4">
-        <h3 className="mb-2 font-mono text-xs uppercase text-brass">Start</h3>
+        <h3 className="mb-2 font-mono text-xs uppercase text-brass">Provider discovery</h3>
+        {liveExa ? (
+          <p className="mb-3 text-sm text-paper">Exa key present — live search is available.</p>
+        ) : (
+          <p className="mb-3 text-sm text-brass">
+            LIVE DISCOVERY NOT RUN — no EXA_API_KEY. Fixture results stay labeled MOCK and are never shown as
+            live.
+          </p>
+        )}
+        {discoveryOn ? (
+          <form action={runProviderDiscoveryAction}>
+            <button type="submit" className="bg-brass px-4 py-2 font-mono text-xs text-ink">
+              Run provider discovery
+            </button>
+          </form>
+        ) : (
+          <p className="text-sm text-mute">Provider discovery is off in this environment.</p>
+        )}
+        {lastRun ? (
+          <div className="mt-4 space-y-2 text-sm text-mute">
+            <p className="font-mono text-[10px] uppercase text-brass">
+              Last run {lastRun.live ? "LIVE" : "MOCK"} · {lastRun.status} · {lastRun.createdAt}
+            </p>
+            <p>
+              Profile {lastRun.candidateProfileVersion} · policy {lastRun.decisionPolicyVersion} · config{" "}
+              {lastRun.configVersion}
+            </p>
+            <ul className="space-y-2">
+              {lastItems.slice(0, 12).map((item) => (
+                <li key={item.id} className="border border-line bg-panel-2 p-2">
+                  <p className="text-paper">
+                    {item.title ?? "(untitled)"} · {item.company ?? "company unknown"}
+                  </p>
+                  <p className="font-mono text-[10px] uppercase">
+                    {item.live ? "live" : "mock"} · {item.stage} · {item.triageBucket ?? "n/a"} · {item.providerId}
+                  </p>
+                  {item.opportunityId ? (
+                    <Link className="text-brass" href={`/opportunities/${item.opportunityId}`}>
+                      Open job
+                    </Link>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="border border-line bg-panel p-4">
+        <h3 className="mb-2 font-mono text-xs uppercase text-brass">Simulated board assist</h3>
         <form action={startDiscoverySession}>
-          <button type="submit" className="bg-brass px-4 py-2 font-mono text-xs text-ink">
+          <button type="submit" className="border border-brass px-4 py-2 font-mono text-xs text-brass">
             Start read-only discovery (simulated SEEK-style board)
           </button>
         </form>

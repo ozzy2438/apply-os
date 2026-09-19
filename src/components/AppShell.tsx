@@ -38,8 +38,8 @@ export function AppShell({ demo, children }: { demo: boolean; children: React.Re
       </header>
       {demo ? (
         <p className="mb-4 border border-brass-dim bg-panel-2 px-3 py-2 font-mono text-xs text-brass">
-          Demo mode — typed mock Jev, template drafts. Job Discovery uses a simulated board, never a real
-          browser.
+          Demo mode — typed mock Jev, template drafts. Provider discovery is labeled MOCK unless EXA_API_KEY
+          is set. Job Discovery never opens a real browser in demo, and nothing is submitted for you.
         </p>
       ) : null}
       <p className="mb-6 font-mono text-[10px] uppercase tracking-wider text-mute">
