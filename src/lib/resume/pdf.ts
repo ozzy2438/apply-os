@@ -22,6 +22,46 @@ function charWidth(ch: string): number {
   return 0.55;
 }
 
+/** Narrow, documented substitutions so Helvetica can print common resume punctuation. */
+function asciiSafe(text: string): { text: string; lostLettersOrDigits: boolean } {
+  let lostLettersOrDigits = false;
+  const out: string[] = [];
+  for (const ch of text) {
+    if (ch === "•" || ch === "·") {
+      out.push("-");
+      continue;
+    }
+    if (ch === "–" || ch === "—" || ch === "−") {
+      out.push("-");
+      continue;
+    }
+    if (ch === "“" || ch === "”") {
+      out.push('"');
+      continue;
+    }
+    if (ch === "‘" || ch === "’") {
+      out.push("'");
+      continue;
+    }
+    if (ch === "\u00a0") {
+      out.push(" ");
+      continue;
+    }
+    const code = ch.charCodeAt(0);
+    if (code <= 255) {
+      out.push(ch);
+      continue;
+    }
+    if (/\p{L}|\p{N}/u.test(ch)) {
+      lostLettersOrDigits = true;
+      out.push("?");
+    } else {
+      out.push(" ");
+    }
+  }
+  return { text: out.join(""), lostLettersOrDigits };
+}
+
 function latin1(text: string): { encoded: string; replaced: boolean } {
   let replaced = false;
   const out: string[] = [];
@@ -71,7 +111,8 @@ export function renderMeasuredPdf(input: {
 }): MeasuredPdf {
   const maxWidth = A4_W - MARGIN_X * 2;
   const usable = A4_H - MARGIN_Y * 2;
-  const lines = input.rendered.text.split("\n").flatMap((line) => (line.trim() ? wrap(line, maxWidth) : [""]));
+  const source = asciiSafe(input.rendered.text);
+  const lines = source.text.split("\n").flatMap((line) => (line.trim() ? wrap(line, maxWidth) : [""]));
   const pageCapacity = Math.max(1, Math.floor(usable / LINE));
   const pageCount = Math.max(1, Math.ceil(lines.length / pageCapacity));
   const clipped = lines.length > pageCapacity * pageCount;
@@ -131,8 +172,9 @@ export function renderMeasuredPdf(input: {
   const bytes = Buffer.from(body, "latin1");
   const extractedText = lines.join("\n");
   const normalisedPdf = extractedText.replace(/\s+/g, " ").trim();
-  const normalisedSource = input.rendered.text.replace(/\s+/g, " ").trim();
-  const extractedTextMatches = !replaced && normalisedPdf === normalisedSource;
+  const normalisedSource = source.text.replace(/\s+/g, " ").trim();
+  const extractedTextMatches =
+    !replaced && !source.lostLettersOrDigits && normalisedPdf === normalisedSource;
   const receipt: LayoutReceipt = {
     draftHash: input.rendered.draftHash,
     artifactHash: createHash("sha256").update(bytes).digest("hex"),

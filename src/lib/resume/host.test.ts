@@ -87,7 +87,9 @@ Required: SQL, Python, stakeholder reporting, and statistical analysis on public
     expect(pdf.bytes.subarray(0, 5).toString()).toBe("%PDF-");
     expect(pdf.receipt.measured).toBe(true);
     expect(pdf.receipt.extractedTextMatches).toBe(true);
-    expect(pdf.extractedText.replace(/\s+/g, " ").trim()).toBe(rendered.text.replace(/\s+/g, " ").trim());
+    const printable = (s: string) =>
+      s.replace(/[•·]/g, "-").replace(/[–—−]/g, "-").replace(/\s+/g, " ").trim();
+    expect(printable(pdf.extractedText)).toBe(printable(rendered.text));
     expect(pdf.receipt.artifactHash).toMatch(/^[a-f0-9]{64}$/);
     expect(pdf.receipt.minFontSizePt).toBeGreaterThanOrEqual(policy.minFontSizePt);
     expect(pdf.receipt.rendererRevision).toBe("apply-os-pdf-v1");
@@ -156,19 +158,20 @@ Required: SQL, Python, stakeholder reporting, and statistical analysis on public
   });
 
   it("defaults closed in production unless the flag is explicit", () => {
-    const prevEnv = process.env.NODE_ENV;
-    const prevFlag = process.env.APPLY_OS_RESUME_STUDIO;
+    const env = process.env as { NODE_ENV?: string; APPLY_OS_RESUME_STUDIO?: string };
+    const prevEnv = env.NODE_ENV;
+    const prevFlag = env.APPLY_OS_RESUME_STUDIO;
     try {
-      delete process.env.APPLY_OS_RESUME_STUDIO;
-      process.env.NODE_ENV = "production";
+      delete env.APPLY_OS_RESUME_STUDIO;
+      env.NODE_ENV = "production";
       expect(resumeStudioEnabled()).toBe(false);
-      process.env.APPLY_OS_RESUME_STUDIO = "true";
+      env.APPLY_OS_RESUME_STUDIO = "true";
       expect(resumeStudioEnabled()).toBe(true);
     } finally {
-      if (prevFlag === undefined) delete process.env.APPLY_OS_RESUME_STUDIO;
-      else process.env.APPLY_OS_RESUME_STUDIO = prevFlag;
-      if (prevEnv === undefined) delete process.env.NODE_ENV;
-      else process.env.NODE_ENV = prevEnv;
+      if (prevFlag === undefined) delete env.APPLY_OS_RESUME_STUDIO;
+      else env.APPLY_OS_RESUME_STUDIO = prevFlag;
+      if (prevEnv === undefined) delete env.NODE_ENV;
+      else env.NODE_ENV = prevEnv;
     }
   });
 
