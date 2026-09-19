@@ -28,6 +28,14 @@ export type CanonicalStatus = (typeof CANONICAL_STATUSES)[number];
 export const RECOMMENDATIONS = ["APPLY_CANDIDATE", "REVIEW_REQUIRED", "SKIP"] as const;
 export type Recommendation = (typeof RECOMMENDATIONS)[number];
 
+export const TRIAGE_BUCKETS = [
+  "HARD_REJECT",
+  "LOW_PRIORITY_ARCHIVE",
+  "DEEP_REVIEW",
+  "HUMAN_REVIEW",
+] as const;
+export type TriageBucket = (typeof TRIAGE_BUCKETS)[number];
+
 export const DUPLICATE_STATUSES = ["UNIQUE", "POSSIBLE_DUPLICATE", "DUPLICATE"] as const;
 export type DuplicateStatus = (typeof DUPLICATE_STATUSES)[number];
 

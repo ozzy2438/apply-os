@@ -1,15 +1,15 @@
 import { randomUUID } from "node:crypto";
-import type { Profile, SourceType } from "@/lib/jev/types";
+import type { ComposedEvaluation, Profile, SourceType } from "@/lib/jev/types";
+import { DIMENSION_IDS, GATE_IDS } from "@/lib/jev/types";
 import { normalizeJobPosting } from "./normalize";
 import { classifyDuplicate } from "./duplicates";
 import { runHardFilters } from "@/lib/policy/hard-filters";
-import { buildEvaluation, explanationFromEvaluation } from "@/lib/policy/compose";
-import { evidenceReadiness } from "@/lib/policy/evidence";
+import { explanationFromEvaluation } from "@/lib/policy/compose";
 import { nextAfterEvaluation } from "@/lib/policy/state-machine";
 import { toV1Status } from "@/lib/domain/mapping";
 import { getDecisionProvider } from "@/lib/providers/factory";
-import { sha256 } from "@/lib/domain/hash";
 import { POLICY_VERSION } from "@/lib/policy/version";
+import { DEFAULT_WEIGHTS } from "@/lib/jev/questions";
 import {
   getCanonicalJob,
   insertAudit,
@@ -25,6 +25,34 @@ import { insertEvaluation, insertOpportunity, updateOpportunityStatus } from "@/
 import { evaluateOpportunity } from "@/lib/jev/evaluate";
 import { suggestedStatus } from "@/lib/jev/compose";
 import type { JobEvaluation, JobPosting } from "@/lib/domain/schemas";
+import { evaluateCanonicalJob } from "@/lib/canonical/evaluate";
+
+function lightweightComposed(evaluation: JobEvaluation): ComposedEvaluation {
+  const skip = evaluation.finalDecision === "SKIP";
+  const review = evaluation.finalDecision === "REVIEW_REQUIRED";
+  const action = skip ? "skip" : review ? "needs_review" : "apply_now";
+  return {
+    gates: GATE_IDS.map((id) => ({ id, noul: skip ? 0.85 : 0.1, outcome: skip ? "fail" : "pass" })),
+    hardFail: skip && evaluation.deterministicResults.hardBlockers.length > 0,
+    gateReview: review,
+    dimensions: DIMENSION_IDS.map((id) => ({
+      id,
+      score: (evaluation.roleFit ?? evaluation.finalFitScore) * 4,
+      normalized: evaluation.roleFit ?? evaluation.finalFitScore,
+      confidence: evaluation.decisionConfidence ?? 0.7,
+      weight: DEFAULT_WEIGHTS[id],
+      probabilities: {},
+    })),
+    fit: evaluation.finalFitScore,
+    action,
+    actionConfidence: evaluation.decisionConfidence ?? 0.7,
+    actionProbabilities: { [action]: 1 },
+    confidenceBand: review ? "medium" : skip ? "high" : "high",
+    deskEligible: evaluation.finalDecision === "APPLY_CANDIDATE",
+    rankingScore: evaluation.priorityScore ?? evaluation.finalFitScore,
+    label: evaluation.triage ?? evaluation.finalDecision,
+  };
+}
 
 export async function ingestCanonical(input: {
   rawText: string;
@@ -52,42 +80,16 @@ export async function ingestCanonical(input: {
   const rules = await getCandidateRules();
   const evidence = await listEvidence();
   const deterministic = runHardFilters({ job, profile: rules, duplicateStatus });
-
-  const provider = getDecisionProvider();
-  const decision = deterministic.hardBlockers.length
-    ? {
-        roleFit: { score: 0.1, confidence: 0.9, probabilities: { "0": 1 } },
-        skillsFit: { score: 0.1, confidence: 0.9, probabilities: { "0": 1 } },
-        seniorityFit: { score: 0.1, confidence: 0.9, probabilities: { "0": 1 } },
-        strategicValue: { score: 0.1, confidence: 0.9, probabilities: { "0": 1 } },
-        missingInformation: { value: false, probability: 0.1 },
-        redFlag: { value: true, probability: 0.9 },
-        recommendation: { choice: "SKIP" as const, confidence: 0.92 },
-      }
-    : await provider.evaluateJob({
-        candidate: rules,
-        evidence,
-        job,
-        policyContext: {
-          hardFilterResults: { ...deterministic },
-          decisionThresholds: { ...rules.applicationRules },
-        },
-      });
-
-  const evaluation = buildEvaluation({
-    id: randomUUID(),
-    jobId: job.id,
-    candidateProfileVersion: rules.version,
+  const previous = await latestJobEvaluationV2(job.id);
+  const canonical = await evaluateCanonicalJob({
+    job,
+    rules,
     deterministic,
-    decision,
-    evidenceReady: evidenceReadiness(job, evidence, rules) >= 0.45,
-    evaluatedAt: new Date().toISOString(),
-    thresholds: {
-      applyMinimumScore: rules.applicationRules.applyRecommendationMinimumScore,
-      reviewMinimumScore: rules.applicationRules.reviewRecommendationMinimumScore,
-      minimumDecisionConfidence: rules.applicationRules.minimumDecisionConfidence,
-    },
+    previous,
+    dbEvidence: evidence,
   });
+  const evaluation = canonical.evaluation;
+  const provider = getDecisionProvider();
 
   job.status = nextAfterEvaluation(evaluation.finalDecision);
   if (job.extractionConfidence < 0.5 && job.status === "APPLY_CANDIDATE") {
@@ -112,37 +114,49 @@ export async function ingestCanonical(input: {
   }
 
   await saveCanonicalJob(job);
-  await saveJobEvaluationV2(evaluation);
+  if (!canonical.reusedCache) await saveJobEvaluationV2(evaluation);
 
-  const v1 = await evaluateOpportunity(
-    {
-      posting: {
-        sourceType: input.sourceType,
-        title: job.title,
-        company: job.company ?? "Unknown",
-        location: job.location ?? "Unspecified",
-        compensation: job.salaryMax ? `${job.salaryCurrency ?? ""} ${job.salaryMax}` : null,
-        url: job.sourceUrl,
-        rawText: job.descriptionRaw,
+  let v1Composed = lightweightComposed(evaluation);
+  if (canonical.deepReviewRan && !canonical.reusedCache) {
+    const v1 = await evaluateOpportunity(
+      {
+        posting: {
+          sourceType: input.sourceType,
+          title: job.title,
+          company: job.company ?? "Unknown",
+          location: job.location ?? "Unspecified",
+          compensation: job.salaryMax ? `${job.salaryCurrency ?? ""} ${job.salaryMax}` : null,
+          url: job.sourceUrl,
+          rawText: job.descriptionRaw,
+        },
+        profile: {
+          goals: input.profile.goals,
+          constraints: input.profile.constraints,
+          cv: input.profile.bullets,
+        },
       },
-      profile: {
-        goals: input.profile.goals,
-        constraints: input.profile.constraints,
-        cv: input.profile.bullets,
-      },
-    },
-    input.profile.weights,
-  );
-  await insertEvaluation({
-    opportunityId: job.id,
-    model: v1.model,
-    demo: v1.demo,
-    answers: v1.answers,
-    composed: v1.composed,
-  });
+      input.profile.weights,
+    );
+    v1Composed = v1.composed;
+    await insertEvaluation({
+      opportunityId: job.id,
+      model: v1.model,
+      demo: v1.demo,
+      answers: v1.answers,
+      composed: v1.composed,
+    });
+  } else if (!canonical.reusedCache) {
+    await insertEvaluation({
+      opportunityId: job.id,
+      model: provider.modelVersion,
+      demo: provider.name === "DEMO",
+      answers: {},
+      composed: v1Composed,
+    });
+  }
 
   const routed = toV1Status(job.status);
-  const v1Suggest = suggestedStatus(v1.composed);
+  const v1Suggest = suggestedStatus(v1Composed);
   const status = routed === "skipped" || v1Suggest === "skipped" ? "skipped" : routed;
   if (status !== "inbox") {
     await updateOpportunityStatus(job.id, status, "policy+Jev route");
@@ -155,15 +169,26 @@ export async function ingestCanonical(input: {
     profileVersion: rules.version,
     policyVersion: POLICY_VERSION,
     modelProvider: provider.name === "DEMO" ? "DEMO" : "JEV",
-    modelVersion: provider.modelVersion,
-    inputHash: sha256(job.descriptionRaw).slice(0, 24),
+    modelVersion: evaluation.jevModelVersion ?? provider.modelVersion,
+    inputHash: evaluation.jobInputHash ?? null,
     observationVersion: null,
     decisionSummary: {
       finalDecision: evaluation.finalDecision,
       finalFitScore: evaluation.finalFitScore,
       recommendation: evaluation.semanticSignals.recommendation,
+      triage: evaluation.triage,
+      roleFit: evaluation.roleFit,
+      evidenceCoverage: evaluation.evidenceCoverage,
+      informationCompleteness: evaluation.informationCompleteness,
+      decisionConfidence: evaluation.decisionConfidence,
+      priorityScore: evaluation.priorityScore,
+      candidateProfileVersion: evaluation.candidateProfileVersionLabel,
+      decisionPolicyVersion: evaluation.decisionPolicyVersion,
+      evaluationSchemaVersion: evaluation.evaluationSchemaVersion,
+      reusedCache: canonical.reusedCache,
+      deepReviewRan: canonical.deepReviewRan,
     },
-    policyResult: { ...evaluation.deterministicResults },
+    policyResult: { ...evaluation.deterministicResults, triage: evaluation.triage },
     executionResult: { explanation: explanationFromEvaluation(evaluation) },
   });
 
@@ -196,31 +221,14 @@ export async function backfillCanonicalForOpportunity(input: {
   const rules = await getCandidateRules();
   const evidence = await listEvidence();
   const deterministic = runHardFilters({ job, profile: rules, duplicateStatus });
-  const provider = getDecisionProvider();
-  const decision = await provider.evaluateJob({
-    candidate: rules,
-    evidence,
+  const canonical = await evaluateCanonicalJob({
     job,
-    policyContext: {
-      hardFilterResults: { ...deterministic },
-      decisionThresholds: { ...rules.applicationRules },
-    },
-  });
-  const evaluation = buildEvaluation({
-    id: randomUUID(),
-    jobId: job.id,
-    candidateProfileVersion: rules.version,
+    rules,
     deterministic,
-    decision,
-    evidenceReady: evidenceReadiness(job, evidence, rules) >= 0.45,
-    evaluatedAt: new Date().toISOString(),
-    thresholds: {
-      applyMinimumScore: rules.applicationRules.applyRecommendationMinimumScore,
-      reviewMinimumScore: rules.applicationRules.reviewRecommendationMinimumScore,
-      minimumDecisionConfidence: rules.applicationRules.minimumDecisionConfidence,
-    },
+    previous: await latestJobEvaluationV2(job.id),
+    dbEvidence: evidence,
   });
-  job.status = nextAfterEvaluation(evaluation.finalDecision);
+  job.status = nextAfterEvaluation(canonical.evaluation.finalDecision);
   await saveCanonicalJob(job);
-  await saveJobEvaluationV2(evaluation);
+  if (!canonical.reusedCache) await saveJobEvaluationV2(canonical.evaluation);
 }

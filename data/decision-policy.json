@@ -1,0 +1,371 @@
+{
+  "policy_version": "1.1.0",
+  "generated_at": "2026-09-19",
+  "derived_from": "candidate-profile.json schema_version 1.1.0",
+  "active_discovery_targets": [
+    {
+      "role_family_id": "ai_engineering",
+      "role_family": "AI Engineer",
+      "priority": "primary",
+      "enabled_for_discovery": true,
+      "rationale": "Deepest and most current evidence base: live Azure deployment, agent governance, retrieval engineering and evaluation across both paid contracts and independent builds."
+    },
+    {
+      "role_family_id": "mlops_engineering",
+      "role_family": "MLOps Engineer",
+      "priority": "primary",
+      "enabled_for_discovery": true,
+      "rationale": "Databricks, MLflow, Delta, scheduled jobs, drift monitoring, retraining and unusually deep automated testing, plus agent governance which few MLOps candidates carry."
+    },
+    {
+      "role_family_id": "data_engineering_cloud",
+      "role_family": "Data Engineer / Cloud Data",
+      "priority": "primary",
+      "enabled_for_discovery": true,
+      "rationale": "Multiple paid contracts delivering governed lakehouses and pipelines on AWS, Databricks and Microsoft Fabric with reconciliation, lineage and quarantine controls."
+    },
+    {
+      "role_family_id": "data_science",
+      "role_family": "Data Scientist",
+      "priority": "primary",
+      "enabled_for_discovery": true,
+      "rationale": "Statistical inference at scale, leakage-safe validation, forecasting and health, education and public-policy domain datasets."
+    },
+    {
+      "role_family_id": "analytics_engineering",
+      "role_family": "Analytics Engineer",
+      "priority": "secondary",
+      "enabled_for_discovery": false,
+      "rationale": "dbt, semantic layers, dimensional modelling and KPI certification recur across both contract and independent work."
+    },
+    {
+      "role_family_id": "data_quality_governance",
+      "role_family": "Data Quality / Data Governance",
+      "priority": "secondary",
+      "enabled_for_discovery": false,
+      "rationale": "Data quality registers, validation assertions, reconciliation, quarantine, lineage and metric ownership appear across many engagements, including paid ones."
+    },
+    {
+      "role_family_id": "data_analytics_insights",
+      "role_family": "Data Analyst / Insights Analyst",
+      "priority": "secondary",
+      "enabled_for_discovery": false,
+      "rationale": "Strong stakeholder-facing analysis with Power BI, Excel and hypothesis testing, plus the only long-tenured named-employer experience in the profile."
+    },
+    {
+      "role_family_id": "machine_learning_engineering",
+      "role_family": "Machine Learning Engineer",
+      "priority": "secondary",
+      "enabled_for_discovery": false,
+      "rationale": "Recommenders, valuation models, OCR fine-tuning and serving with monitoring and CI/CD, mostly on paid contracts."
+    },
+    {
+      "role_family_id": "ai_solution_architecture",
+      "role_family": "AI Solution Architecture",
+      "priority": "adjacent",
+      "enabled_for_discovery": false,
+      "rationale": "Architecture ownership is evidenced on several engagements, but always as a delivering engineer rather than under an architect title."
+    },
+    {
+      "role_family_id": "bi_reporting",
+      "role_family": "BI / Reporting Developer",
+      "priority": "adjacent",
+      "enabled_for_discovery": false,
+      "rationale": "Power BI semantic models, RLS and executive reporting are evidenced, but this is narrower than the roles the candidate should target."
+    }
+  ],
+  "hard_constraints": {
+    "policy_state": "HARD BLOCKER",
+    "note": "A posting matching any of these is a genuine reject. Keep this list short.",
+    "blockers": [
+      {
+        "blocker": "Role requires permanent relocation outside Victoria",
+        "reason": "Based in Melbourne with no stated willingness to relocate."
+      },
+      {
+        "blocker": "Role requires a security clearance the candidate does not hold and the employer will not sponsor",
+        "reason": "No clearance is evidenced in any source material."
+      },
+      {
+        "blocker": "Role requires a postgraduate qualification as a stated non-negotiable",
+        "reason": "Highest qualification is a BSc plus an Advanced Diploma. See candidate-profile education records."
+      },
+      {
+        "blocker": "Role requires a specific professional registration or licence not held",
+        "reason": "No professional registrations are evidenced."
+      }
+    ],
+    "years_in_title_rule": {
+      "default_route": "HUMAN_REVIEW",
+      "hard_reject_only_when": "The posting states the exact titled-years requirement as non-negotiable or regulatory and adjacent equivalent experience cannot satisfy it.",
+      "note": "A stated years requirement in a particular job title is not a HARD BLOCKER merely because the candidate has not held that exact title."
+    }
+  },
+  "soft_preferences": {
+    "policy_state": "SOFT NEGATIVE or SOFT POSITIVE, never a rejection on its own",
+    "locations": {
+      "base": "Melbourne, VIC, Australia",
+      "preferred": [
+        "Melbourne metropolitan",
+        "Melbourne CBD",
+        "Northern suburbs of Melbourne"
+      ],
+      "acceptable": [
+        "Remote within Australia",
+        "Hybrid in greater Melbourne",
+        "Regional Victoria if remote-first"
+      ],
+      "unacceptable": [
+        "Roles requiring permanent relocation outside Victoria",
+        "Roles requiring full-time onsite attendance outside greater Melbourne"
+      ],
+      "max_commute_notes": "Based in Craigieburn. Melbourne CBD and inner-suburb hybrid roles are workable; daily attendance far from the northern corridor is a soft negative, not a blocker."
+    },
+    "work_modes": {
+      "preferred": [
+        "hybrid",
+        "remote"
+      ],
+      "acceptable": [
+        "onsite in greater Melbourne",
+        "hybrid",
+        "remote"
+      ],
+      "unacceptable": []
+    },
+    "seniority": {
+      "target_levels": [
+        "mid",
+        "senior",
+        "lead (individual contributor)",
+        "specialist"
+      ],
+      "excluded_levels": [
+        "graduate",
+        "intern",
+        "entry-level"
+      ],
+      "note": "People-management roles are outside the evidence base: the source material shows workstream and delivery ownership, not line management. Head-of and manager titles should be flagged for review, not auto-rejected."
+    },
+    "employment_basis": {
+      "acceptable": [
+        "permanent",
+        "fixed-term",
+        "contract",
+        "part-time"
+      ],
+      "direction": "prefer",
+      "preferred_basis": "permanent",
+      "note": "Permanent roles are strategically preferred because the current record is contractor-heavy and light on named, referenceable employers."
+    },
+    "items": [
+      {
+        "preference": "Named, referenceable employer rather than another anonymous engagement",
+        "direction": "prefer",
+        "weight_hint": "high"
+      },
+      {
+        "preference": "Permanent employment over short contract",
+        "direction": "prefer",
+        "weight_hint": "medium"
+      },
+      {
+        "preference": "Role concentrated in data quality, governance, MLOps, analytics engineering or applied AI rather than scattered across role families",
+        "direction": "prefer",
+        "weight_hint": "medium"
+      },
+      {
+        "preference": "Organisation in health, education, government, energy or financial services where the existing domain evidence applies",
+        "direction": "prefer",
+        "weight_hint": "medium"
+      },
+      {
+        "preference": "Roles requiring R as the primary language",
+        "direction": "avoid",
+        "weight_hint": "low"
+      },
+      {
+        "preference": "Roles requiring deep Kubernetes, TensorFlow or Azure Data Factory experience",
+        "direction": "avoid",
+        "weight_hint": "medium"
+      },
+      {
+        "preference": "Pure dashboard-maintenance roles with no analytical or decision component",
+        "direction": "avoid",
+        "weight_hint": "medium"
+      },
+      {
+        "preference": "Roles materially more junior than the evidence supports",
+        "direction": "avoid",
+        "weight_hint": "medium"
+      }
+    ]
+  },
+  "compensation_policy": {
+    "minimum_acceptable_compensation": null,
+    "floor_known": false,
+    "currency": "AUD",
+    "note": "No compensation floor has been confirmed by the candidate. Do not silently copy a runtime figure in here.",
+    "routing_rule": "Do not reject a posting on salary alone. Unstated pay, or pay materially below the observed range, routes to HUMAN_REVIEW."
+  },
+  "triage_policy": {
+    "buckets": [
+      "HARD_REJECT",
+      "LOW_PRIORITY_ARCHIVE",
+      "DEEP_REVIEW",
+      "HUMAN_REVIEW"
+    ],
+    "reject_on": [
+      "HARD BLOCKER only (see hard_constraints)"
+    ],
+    "never_auto_reject_on": [
+      "a SOFT NEGATIVE alone",
+      "compensation uncertainty or pay below observed_target_range alone",
+      "requirement-match percentage alone",
+      "an EVIDENCE GAP in a not_currently_evidenced item alone",
+      "a stated years-in-title requirement alone"
+    ],
+    "route_to": {
+      "HARD_REJECT": "Genuine hard constraint match, including regulatory exact-title years that cannot be satisfied.",
+      "LOW_PRIORITY_ARCHIVE": "No hard blocker, but the title/family is not a plausible capability match. Do not spend deep-review budget.",
+      "DEEP_REVIEW": "Plausible role-family relevance and no hard blocker. Retrieve a relevant evidence subset, then ask Jev for typed judgments.",
+      "HUMAN_REVIEW": "Ambiguity: years-in-title, compensation uncertainty, missing critical fields, or a must-have evidence gap."
+    },
+    "do_not_send_every_non_blocked_job_to_deep_review": true
+  },
+  "deep_review_policy": {
+    "reserved_for": "Jobs with plausible role-family relevance.",
+    "still_review_even_if_below_heuristic_when": [
+      "missing requirements are clearly optional",
+      "the candidate has strong adjacent evidence",
+      "the role has unusually high strategic value",
+      "the posting is ambiguous",
+      "the missing requirement can reasonably be learned",
+      "the requirement is a preference rather than a must-have"
+    ]
+  },
+  "ranking_policy": {
+    "boost_signals": [
+      {
+        "when": "posting concerns trust, safety, governance, evaluation or regulated decisions",
+        "boost": "high",
+        "based_on_pattern": "CP-01"
+      },
+      {
+        "when": "posting asks for hypothesis testing or analytical independence",
+        "boost": "high",
+        "based_on_pattern": "CP-02"
+      },
+      {
+        "when": "posting mentions agent permissions, guardrails or auditability",
+        "boost": "high",
+        "based_on_pattern": "CP-03"
+      }
+    ],
+    "note": "Boost signals inform ordering among postings that already passed triage. They never override a HARD BLOCKER and never manufacture a pass on their own.",
+    "differentiator_weights": [
+      {
+        "when": "posting concerns trust, safety, governance, evaluation or regulated decisions",
+        "boost": "high",
+        "based_on": "Repeated negative findings and declined automation (P40, P54, P55, P60, P62)."
+      },
+      {
+        "when": "posting asks for hypothesis testing or analytical independence",
+        "boost": "high",
+        "based_on": "Disproved stakeholder assumptions on real data (P29, P51)."
+      },
+      {
+        "when": "posting mentions agent permissions, guardrails or auditability",
+        "boost": "high",
+        "based_on": "Agent governance depth across P38, P45, P48, P49, P64."
+      }
+    ]
+  },
+  "application_strategy": {
+    "cv_format": [
+      "One page, plain text output when drafted in conversation",
+      "Bold-first bullet style",
+      "A single Professional Experience section with no separate Projects heading",
+      "At most three to four detailed experience entries; remaining work compressed into one short 'further delivery' line",
+      "Strong profile, then a bulleted list of six to eight key skills, then achievements, so roughly 80 percent of the posting's requirements are visible by halfway down page one"
+    ],
+    "labelling_rules": [
+      "Paid contracts labelled '(Contract)' with sector and NDA notation where applicable",
+      "Independent builds labelled '(Independent Delivery)' with a GitHub link",
+      "Team projects labelled with team size and the candidate's specific role",
+      "Never label an independent build as a client engagement under any wording",
+      "Every entry carries a period; unexplained gaps of a year or more are addressed explicitly"
+    ],
+    "title_tailoring_rule": {
+      "target_headline_or_summary_may_be_tailored": true,
+      "search_target_title_may_be_normalised": true,
+      "historical_employer_titles_must_remain_factually_accurate": true,
+      "contract_or_project_role_labels_source_supported_equivalent_only": true,
+      "rule": "Never upgrade or retitle a historical role simply because a posting uses different title wording."
+    },
+    "strategy_items": [
+      "Extract the five or six key requirements from each posting and build the application around them",
+      "Mirror the posting's exact terminology wherever it is accurate, without keyword stuffing",
+      "Replace duty language with action verbs plus figures showing scale and result",
+      "Control the explanation of any gap or red flag rather than leaving the employer to invent one",
+      "Concentrate applications in a small number of role families rather than spreading across six",
+      "Australian universities and public sector employers frequently require a separate Key Selection Criteria response; check for one and treat it as the primary scored document"
+    ],
+    "career_goals": {
+      "primary_objective": "Secure a permanent or fixed-term role in an Australian organisation where data or AI work is owned inside a team rather than delivered from outside it.",
+      "motivations": [
+        "Work where the data leads to a decision rather than stopping at a report",
+        "Build a verifiable, referenceable employment record inside a named organisation",
+        "Continue working on problems where evaluation and trustworthiness matter"
+      ],
+      "work_type_sought": [
+        "permanent",
+        "fixed-term contract",
+        "day-rate contract"
+      ]
+    },
+    "requirement_match_guidance": {
+      "heuristic": "Roughly 80 percent of a posting's stated requirements is a useful focusing guideline, not an automatic cutoff. 20 focused applications beat 200 scattered ones.",
+      "never_an_automatic_rejection_threshold": true,
+      "still_review_even_if_below_heuristic_when": [
+        "missing requirements are clearly optional",
+        "the candidate has strong adjacent evidence",
+        "the role has unusually high strategic value",
+        "the posting is ambiguous",
+        "the missing requirement can reasonably be learned",
+        "the requirement is a preference rather than a must-have"
+      ]
+    }
+  },
+  "claim_use_policy": {
+    "forbidden_claims_rule": "Items in candidate-profile.json claim_policy.forbidden_claims must never be used in any application material, in any wording.",
+    "qualified_claims_rule": "Items in candidate-profile.json claim_policy.qualified_claims may be used only with their required_qualification carried in the same sentence.",
+    "not_currently_evidenced_rule": "Items in candidate-profile.json claim_policy.not_currently_evidenced are an EVIDENCE GAP, not a forbidden claim. Do not claim them today; if a posting requires one as a must-have, route to HUMAN_REVIEW rather than silently rejecting or silently claiming it.",
+    "avoid": [
+      "Never fabricate achievements, clients, teams or metrics, including with AI assistance",
+      "Never state a figure below a posting's stated numeric threshold in a way that reads as falling short when the evidence supports more",
+      "Never present Project 02 (Hospital Capacity) metrics in any application material"
+    ]
+  },
+  "human_review_rules": [
+    {
+      "trigger": "Application to a reference-sensitive sector (university, government, large enterprise) where EXP-01 contract engagements are the primary evidence",
+      "reason": "Client identities are unnamed or under NDA for nearly all engagements since 2020; no named referee is evidenced for any of them. This is the single largest verifiability weakness in the profile and a plausible cause of rejection in reference-sensitive sectors.",
+      "policy_state": "HUMAN REVIEW",
+      "related_experience_id": "EXP-01"
+    },
+    {
+      "trigger": "Drafting a CV or application where EXP-02 (Australian Intercultural Society) is a relevant fit",
+      "reason": "EXP-02 is the strongest verifiability asset in the record: a named, long-tenured, referenceable employer with board-level exposure. It is under-weighted in generic CV drafts relative to its value for university, government and not-for-profit applications.",
+      "policy_state": "HUMAN REVIEW",
+      "related_experience_id": "EXP-02",
+      "action_hint": "Foreground EXP-02 for university, government and not-for-profit applications."
+    },
+    {
+      "trigger": "Any question about activity between December 2020 and June 2023",
+      "reason": "No source document covers this period.",
+      "policy_state": "HUMAN REVIEW",
+      "related_experience_id": null
+    }
+  ]
+}

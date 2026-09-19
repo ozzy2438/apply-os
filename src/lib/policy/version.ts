@@ -1,4 +1,4 @@
-export const POLICY_VERSION = process.env.APPLY_OS_POLICY_VERSION?.trim() || "v2.0.0";
+export const POLICY_VERSION = process.env.APPLY_OS_POLICY_VERSION?.trim() || "v2.1.0";
 
 export const DEFAULT_FIT_WEIGHTS = {
   roleFit: 0.3,

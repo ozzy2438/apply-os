@@ -2,12 +2,14 @@ import { bootApp } from "@/lib/boot";
 import { listEvidence } from "@/lib/db/store-extended";
 import { saveEvidenceAction } from "@/app/actions";
 import { EVIDENCE_TYPES, VERIFICATION_METHODS } from "@/lib/domain/enums";
+import { profileSummary } from "@/lib/canonical/summary";
 
 export const dynamic = "force-dynamic";
 
 export default async function EvidencePage() {
   await bootApp();
   const items = await listEvidence();
+  const summary = profileSummary();
 
   return (
     <main className="max-w-3xl space-y-6">
@@ -16,6 +18,12 @@ export default async function EvidencePage() {
         <p className="text-sm text-mute">
           Cover-letter claims can only be Ready when they match verified evidence. Confirm new items yourself —
           the model does not invent them.
+        </p>
+        <p className="mt-2 font-mono text-[10px] uppercase text-brass">
+          Canonical · {summary.projects} projects · {summary.evidence} evidence · {summary.applicationSafeEvidence} application-safe · P02 excluded
+        </p>
+        <p className="text-xs text-mute">
+          The 64-project library stays in candidate-profile.json. This page is for confirmed overlays, not a JSON dump.
         </p>
       </div>
       <div className="space-y-3">

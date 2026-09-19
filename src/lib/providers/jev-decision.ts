@@ -19,11 +19,11 @@ function jobQuestions() {
     missing_information: noul("Is there too little information to make a safe application recommendation?"),
     red_flag: noul("Does the job contain a likely user-configured red flag or incompatible constraint?"),
     recommendation: choice(
-      "Given the candidate profile, job, hard-filter results, and scoring rubric, how should this job be routed?",
+      "Typed routing signal only — not an apply/reject policy decision. How strong is the evidence-to-requirement match?",
       {
-        APPLY_CANDIDATE: "No hard blocker, enough evidence, worth pursuing.",
-        REVIEW_REQUIRED: "Ambiguity, missing fields, or mixed signals.",
-        SKIP: "Clear mismatch — do not spend time.",
+        APPLY_CANDIDATE: "Role is relevant and requirements are honestly evidenced.",
+        REVIEW_REQUIRED: "Ambiguous requirements, missing fields, or mixed evidence strength.",
+        SKIP: "Clear mismatch on role, seniority, or evidenced capability.",
       },
     ),
   };

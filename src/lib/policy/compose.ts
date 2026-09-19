@@ -162,7 +162,16 @@ export function explanationFromEvaluation(evaluation: JobEvaluation): string {
     `- Missing-information probability: ${Math.round(s.missingInformationProbability * 100)}%`,
     `- Red-flag probability: ${Math.round(s.redFlagProbability * 100)}%`,
     `- Final fit ${Math.round(evaluation.finalFitScore * 100)}/100 · decision ${evaluation.finalDecision}`,
+    evaluation.triage ? `- Triage ${evaluation.triage}` : "",
+    evaluation.roleFit != null ? `- roleFit ${Math.round(evaluation.roleFit * 100)} (not a hire probability)` : "",
+    evaluation.evidenceCoverage != null ? `- evidenceCoverage ${Math.round(evaluation.evidenceCoverage * 100)}` : "",
+    evaluation.informationCompleteness != null
+      ? `- informationCompleteness ${Math.round(evaluation.informationCompleteness * 100)}`
+      : "",
+    evaluation.decisionConfidence != null
+      ? `- decisionConfidence ${Math.round(evaluation.decisionConfidence * 100)}`
+      : "",
     ...evaluation.explanationReasons.map((r) => `- ${r}`),
-  ];
+  ].filter(Boolean);
   return lines.join("\n");
 }

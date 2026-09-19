@@ -5,6 +5,7 @@ import { buildActionSpace } from "@/lib/browser/action-space";
 import { getDecisionProvider } from "@/lib/providers/factory";
 import { browserModeLabel } from "@/lib/browser/flags";
 import { startDiscoverySession, stepDiscovery, stopDiscovery } from "./actions";
+import { profileSummary } from "@/lib/canonical/summary";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export default async function DiscoverPage({
   searchParams: Promise<{ session?: string }>;
 }) {
   await bootApp();
+  const summary = profileSummary();
   const { session: sessionId } = await searchParams;
   const session = sessionId ? await getBrowserSession(sessionId) : null;
   const mode = browserModeLabel();
@@ -46,6 +48,13 @@ export default async function DiscoverPage({
           payments never run without a just-in-time confirmation — and demo mode never opens a real browser.
         </p>
         <p className="mt-2 font-mono text-[10px] uppercase text-brass">Mode · {mode.replaceAll("-", " ")}</p>
+        <p className="mt-2 text-sm text-paper">
+          Discovery targets:{" "}
+          {summary.discoveryFamilies.filter((f) => f.enabled).map((f) => f.label).join(" · ") || "none enabled"}
+        </p>
+        <p className="text-xs text-mute">
+          Secondary and adjacent families remain in the capability library with discovery off.
+        </p>
       </div>
 
       <section className="border border-line bg-panel p-4">
