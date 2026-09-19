@@ -24,7 +24,7 @@ export function deskDiscoveryFacts(
   evaluation: JobEvaluation | null,
   now = new Date(),
 ): DeskDiscoveryFacts | null {
-  if (!item && !evaluation) return null;
+  if (!item) return null;
   const normalized = item?.normalized ?? {};
   const postedAt = typeof normalized.postedAt === "string" ? normalized.postedAt : null;
   const discoveredAt = typeof normalized.discoveredAt === "string" ? normalized.discoveredAt : item?.createdAt ?? null;

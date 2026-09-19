@@ -245,6 +245,7 @@ export async function runDiscoveryFunnel(opts: FunnelOptions): Promise<Discovery
               sourceType: "job_posting",
               profile: jevProfile,
               existingId: current.clusterId,
+              hardFilterMode: "discovery",
             });
             current.opportunityId = ingested.opportunityId;
             current.jevRan = ingested.evaluation.triage === "DEEP_REVIEW" && Boolean(ingested.evaluation.jevModelVersion);

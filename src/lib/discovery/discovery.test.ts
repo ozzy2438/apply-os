@@ -4,7 +4,7 @@ import path from "node:path";
 import { readFileSync } from "node:fs";
 import { resetDriverForTests, sqliteDriver } from "@/lib/db/driver";
 import { saveProfile, getBriefing } from "@/lib/db/store";
-import { replaceEvidence, saveCandidateRules, listCanonicalJobs } from "@/lib/db/store-extended";
+import { replaceEvidence, saveCandidateRules, listCanonicalJobs, latestJobEvaluationV2 } from "@/lib/db/store-extended";
 import { DEFAULT_CANDIDATE_PROFILE } from "@/lib/domain/defaults";
 import { evidenceFromBullets } from "@/lib/policy/evidence";
 import { SAMPLE_BULLETS, SAMPLE_CONSTRAINTS, SAMPLE_GOALS, SAMPLE_WEIGHTS } from "@/lib/seed/fixtures";
@@ -219,6 +219,23 @@ describe("discovery layer", () => {
     const sydney = result.clusters.find((c) => c.company === "Remote North");
     expect(sydney?.triageBucket).not.toBe("HARD_REJECT");
     expect(["DEEP_REVIEW", "HUMAN_REVIEW", "LOW_PRIORITY_ARCHIVE"]).toContain(sydney?.triageBucket);
+  });
+
+  it("9b. discovery ingest keeps a soft location preference out of HARD_REJECT", async () => {
+    await seedDb();
+    const result = await runDiscoveryFunnel({
+      providers: [createFixtureProvider()],
+      now: NOW,
+      live: false,
+      usedFixture: true,
+      hydrate: false,
+      ingestDeepReview: true,
+    });
+    const sydney = result.clusters.find((c) => c.company === "Remote North");
+    expect(sydney?.opportunityId).toBeTruthy();
+    const evaluation = await latestJobEvaluationV2(sydney!.opportunityId!);
+    expect(evaluation?.triage).not.toBe("HARD_REJECT");
+    expect(evaluation?.deterministicResults.hardBlockers.some((b) => /location/i.test(b))).toBe(false);
   });
 
   it("10. provider failure does not corrupt the pipeline", async () => {

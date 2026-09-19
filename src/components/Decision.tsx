@@ -106,7 +106,8 @@ export function DiscoveryFactsStrip(facts: DeskDiscoveryFacts) {
   return (
     <div className="border border-line bg-panel-2 p-3 font-mono text-[11px] text-mute">
       <p className="uppercase text-brass">
-        {facts.mock ? "MOCK discovery" : "Live discovery"} · {facts.providers.join(" · ") || "provider"} ·{" "}
+        {facts.mock ? "MOCK discovery" : facts.live ? "Live discovery" : "Discovery"} ·{" "}
+        {facts.providers.join(" · ") || "provider"} ·{" "}
         {facts.ageDays == null ? "freshness unknown" : `${Math.max(0, Math.round(facts.ageDays))}d old`}
       </p>
       <p className="mt-1 text-paper">

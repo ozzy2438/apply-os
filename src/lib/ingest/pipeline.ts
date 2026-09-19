@@ -4,6 +4,7 @@ import { DIMENSION_IDS, GATE_IDS } from "@/lib/jev/types";
 import { normalizeJobPosting } from "./normalize";
 import { classifyDuplicate } from "./duplicates";
 import { runHardFilters } from "@/lib/policy/hard-filters";
+import { runDiscoveryHardFilters } from "@/lib/discovery/hard-filters";
 import { explanationFromEvaluation } from "@/lib/policy/compose";
 import { nextAfterEvaluation } from "@/lib/policy/state-machine";
 import { toV1Status } from "@/lib/domain/mapping";
@@ -60,6 +61,7 @@ export async function ingestCanonical(input: {
   sourceType: SourceType;
   profile: Profile;
   existingId?: string;
+  hardFilterMode?: "standard" | "discovery";
 }): Promise<{
   job: JobPosting;
   evaluation: JobEvaluation;
@@ -79,7 +81,10 @@ export async function ingestCanonical(input: {
   const duplicateStatus = classifyDuplicate(job, existing);
   const rules = await getCandidateRules();
   const evidence = await listEvidence();
-  const deterministic = runHardFilters({ job, profile: rules, duplicateStatus });
+  const deterministic =
+    input.hardFilterMode === "discovery"
+      ? runDiscoveryHardFilters({ job, profile: rules, duplicateStatus })
+      : runHardFilters({ job, profile: rules, duplicateStatus });
   const previous = await latestJobEvaluationV2(job.id);
   const canonical = await evaluateCanonicalJob({
     job,
