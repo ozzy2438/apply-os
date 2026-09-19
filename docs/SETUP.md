@@ -3,6 +3,7 @@
 ```bash
 npm install
 cp .env.example .env.local   # optional
+npm run typesafe:login       # TypeSafe must accept the key before it is saved
 npm run dev
 ```
 

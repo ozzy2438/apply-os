@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typesafe:login": "node scripts/verify-typesafe-key.mjs"
   },
   "engines": {
     "node": ">=20"

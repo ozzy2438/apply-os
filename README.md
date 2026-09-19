@@ -19,6 +19,7 @@ The agency-ready specification is [`BUILD_PROMPT.md`](./BUILD_PROMPT.md). V1 is 
 ```bash
 npm install
 cp .env.example .env.local   # optional; demo mode works without keys
+npm run typesafe:login       # paste key; TypeSafe must confirm before it is saved
 npm run dev
 ```
 
