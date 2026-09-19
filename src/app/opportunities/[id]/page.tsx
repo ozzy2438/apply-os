@@ -16,7 +16,7 @@ import { getCanonicalJob, hasApproval, latestJobEvaluationV2, listAudits, listNo
 import { explanationFromEvaluation } from "@/lib/policy/compose";
 import { STATUSES } from "@/lib/jev/types";
 import { resumeStudioEnabled } from "@/lib/resume/flags";
-import { latestResumeRun } from "@/lib/resume/persist";
+import { latestResumeRun, latestResumeRunByIntent } from "@/lib/resume/persist";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
@@ -38,7 +38,8 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
   const submitApproved = await hasApproval(id, "SUBMIT");
   const resumeEnabled = resumeStudioEnabled();
   const resumeRun = resumeEnabled ? await latestResumeRun(id) : null;
-  const resumeReady = resumeRun?.status === "READY";
+  const buildRun = resumeEnabled ? await latestResumeRunByIntent(id, "build") : null;
+  const resumeReady = buildRun?.status === "READY";
 
   return (
     <main className="space-y-6">
@@ -187,7 +188,7 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
               </button>
             </form>
           </div>
-          {resumeRun?.intent === "build" ? (
+          {buildRun ? (
             <Link href={`/opportunities/${opportunity.id}/resume`} className="mt-3 inline-block text-xs text-brass">
               Open plan / draft / QA
             </Link>

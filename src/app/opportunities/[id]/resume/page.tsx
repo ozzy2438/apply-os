@@ -4,8 +4,8 @@ import { bootApp } from "@/lib/boot";
 import { getOpportunity } from "@/lib/db/store";
 import { latestJobEvaluationV2 } from "@/lib/db/store-extended";
 import { resumeStudioEnabled } from "@/lib/resume/flags";
-import { latestResumeRun } from "@/lib/resume/persist";
-import { approveResumeAction, reviewExistingResumeAction } from "@/app/resume-actions";
+import { latestResumeRun, latestResumeRunByIntent } from "@/lib/resume/persist";
+import { approveResumeAction, proposeResumeRewriteAction, reviewExistingResumeAction } from "@/app/resume-actions";
 import { pct } from "@/components/Decision";
 
 export const dynamic = "force-dynamic";
@@ -16,17 +16,32 @@ export default async function ResumeStudioPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const opportunity = await getOpportunity(id);
   if (!opportunity) notFound();
-  const run = await latestResumeRun(id);
+  const latest = await latestResumeRun(id);
+  const run = (await latestResumeRunByIntent(id, "build")) ?? latest;
+  const existingRun = await latestResumeRunByIntent(id, "existing");
   const evaluation = await latestJobEvaluationV2(id);
   const roleFit = evaluation?.roleFit ?? evaluation?.semanticSignals.roleFitScore ?? null;
   const snap = run?.snapshot;
-  const ready = run?.status === "READY";
+  const existingSnap = existingRun?.snapshot.existingReview ? existingRun.snapshot : snap?.existingReview ? snap : null;
+  const ready = run?.status === "READY" && run.intent === "build";
+  const selectedClaims = snap?.draft
+    ? snap.plan
+      ? [...new Set([
+          ...snap.draft.summaryClaimIds,
+          ...snap.draft.skillClaimIds,
+          ...snap.draft.entries.flatMap((e) => e.claimIds),
+          ...snap.draft.educationClaimIds,
+          ...snap.draft.certificationClaimIds,
+        ])]
+      : []
+    : [];
 
   return (
     <main className="space-y-6">
       <div>
         <p className="font-mono text-xs uppercase tracking-wider text-mute">
-          Resume Studio · {opportunity.company} · {run?.status ?? "not started"}
+          Resume Studio · {opportunity.company} · {latest?.status ?? run?.status ?? "not started"}
+          {run?.intent === "build" && latest && latest.intent !== "build" ? ` · last build ${run.status}` : ""}
         </p>
         <h2 className="text-2xl text-paper">{opportunity.title}</h2>
         <p className="text-sm text-mute">
@@ -158,10 +173,10 @@ export default async function ResumeStudioPage({ params }: { params: Promise<{ i
         </section>
       ) : null}
 
-      {snap?.existingReview ? (
+      {existingSnap?.existingReview ? (
         <p className="border border-brass-dim bg-panel-2 px-3 py-2 text-sm text-brass">
-          Existing-CV path: claim verification {snap.existingReview.claimVerification}. Ready is not available
-          from a presentation-only review.
+          Existing-CV path: claim verification {existingSnap.existingReview.claimVerification}. Ready is not
+          available from a presentation-only review.
         </p>
       ) : null}
 
@@ -173,6 +188,36 @@ export default async function ResumeStudioPage({ params }: { params: Promise<{ i
               <li key={w}>{w}</li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {run?.intent === "build" && snap?.draft && selectedClaims.length ? (
+        <section className="border border-line bg-panel p-4">
+          <h3 className="mb-2 font-mono text-xs uppercase text-brass">Propose safer wording</h3>
+          <p className="mb-3 text-sm text-mute">
+            Rewrites stay pending. They cannot change dates, titles, metrics, or auto-approve themselves.
+          </p>
+          <form action={proposeResumeRewriteAction.bind(null, id)} className="space-y-3">
+            <label className="block font-mono text-xs text-mute">
+              Claim
+              <select name="originalClaimId" className="mt-1 block w-full border border-line bg-ink px-3 py-2 text-sm text-paper">
+                {selectedClaims.map((id) => (
+                  <option key={id} value={id}>
+                    {id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <textarea
+              name="rewriteText"
+              rows={3}
+              className="w-full border border-line bg-ink px-3 py-2 text-sm"
+              placeholder="Proposed wording. Source facts must stay the same."
+            />
+            <button type="submit" className="border border-line px-3 py-2 font-mono text-xs">
+              Submit pending rewrite
+            </button>
+          </form>
         </section>
       ) : null}
 

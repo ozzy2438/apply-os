@@ -15,4 +15,12 @@ export * from "./pipeline";
 export * from "./flags";
 export * from "./policy";
 export * from "./context";
-export { buildResumeForJob, approveResumeForJob, reviewExistingResumeForJob, recordResumeIntent } from "./service";
+export {
+  buildResumeForJob,
+  approveResumeForJob,
+  reviewExistingResumeForJob,
+  recordResumeIntent,
+  proposeResumeRewrite,
+  proposeResumeRewriteForJob,
+  assertResumeJobAccess,
+} from "./service";

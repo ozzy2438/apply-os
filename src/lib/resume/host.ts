@@ -1,5 +1,4 @@
 import { score } from "@typesafe-ai/sdk";
-import OpenAI from "openai";
 import { getJevRuntime, isDemoMode } from "@/lib/jev/client";
 import type { ResumeContext, ResumePlan, ResumePolicy, ReviewResult, WriterPort } from "./types";
 import { makeJevReviewer, type JevRunner } from "./jev-adapter";
@@ -16,16 +15,17 @@ export function createResumeWriter(ctx: ResumeContext, plan: ResumePlan, policy:
   const key = openaiKey();
   if (!key) return templateWriter(ctx, plan, policy);
 
-  const client = new OpenAI({
-    apiKey: key,
-    baseURL: process.env.OPENAI_BASE_URL || undefined,
-  });
   const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
   return {
     revision: `${WRITER_REVISION}:${model}`,
     mode: "live",
     async write(input) {
+      const { default: OpenAI } = await import("openai");
+      const client = new OpenAI({
+        apiKey: key,
+        baseURL: process.env.OPENAI_BASE_URL || undefined,
+      });
       const completion = await client.chat.completions.create(
         {
           model,

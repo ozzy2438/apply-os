@@ -22,7 +22,9 @@ import {
   casApproveResume,
   insertResumeRun,
   latestResumeRun,
+  latestResumeRunByIntent,
   loadResumeArtifact,
+  patchResumeRunSnapshot,
   saveResumeArtifact,
   type ResumeIntent,
   type ResumeRunRecord,
@@ -35,6 +37,13 @@ export class ResumeAccessError extends Error {
     super(code);
     this.name = "ResumeAccessError";
   }
+}
+
+export async function assertResumeJobAccess(
+  jobId: string,
+  tenantId = DEFAULT_TENANT_ID,
+): Promise<{ opportunityId: string; job: JobPosting }> {
+  return requireJob(jobId, tenantId);
 }
 
 async function requireJob(jobId: string, tenantId = DEFAULT_TENANT_ID): Promise<{ opportunityId: string; job: JobPosting }> {
@@ -262,7 +271,7 @@ export async function buildResumeForJob(jobId: string, userRequested: boolean): 
 export async function approveResumeForJob(jobId: string, acceptedWarnings: boolean): Promise<{ ready: boolean; reasons: string[] }> {
   if (!resumeStudioEnabled()) throw new ResumeAccessError("RESUME_STUDIO_DISABLED");
   const { job } = await requireJob(jobId);
-  const run = await latestResumeRun(job.id);
+  const run = await latestResumeRunByIntent(job.id, "build");
   if (!run?.snapshot.plan || !run.snapshot.draft || !run.snapshot.review || !run.snapshot.layout) {
     return { ready: false, reasons: ["NO_CURRENT_RESUME_RUN"] };
   }
@@ -401,9 +410,28 @@ export async function reviewExistingResumeForJob(jobId: string, rawText: string)
 }
 
 export async function proposeResumeRewrite(jobId: string, proposal: RewriteProposal) {
+  if (!resumeStudioEnabled()) throw new ResumeAccessError("RESUME_STUDIO_DISABLED");
   const { job } = await requireJob(jobId);
   const { context } = buildResumeContext({ job });
-  return proposeRewrite(context, proposal);
+  const card = proposeRewrite(context, proposal);
+  const run = await latestResumeRunByIntent(job.id, "build");
+  if (run) {
+    await patchResumeRunSnapshot(run.id, {
+      ...run.snapshot,
+      pendingReview: [
+        ...run.snapshot.pendingReview,
+        { id: card.id, reason: `Rewrite of ${proposal.originalClaimId} is pending human review and is not auto-approved.` },
+      ],
+    });
+  }
+  return card;
+}
+
+export async function proposeResumeRewriteForJob(jobId: string, originalClaimId: string, text: string) {
+  const { job } = await requireJob(jobId);
+  const source = buildResumeContext({ job }).context.claims.find((c) => c.id === originalClaimId);
+  if (!source) throw new ResumeAccessError("CLAIM_NOT_FOUND");
+  return proposeResumeRewrite(jobId, { originalClaimId, text, evidenceIds: source.evidenceIds });
 }
 
 export function selectedDraftClaimIds(draft: ResumeDraft | null): string[] {
@@ -414,4 +442,4 @@ export function currentResumeContext(job: JobPosting): ResumeContext {
   return buildResumeContext({ job }).context;
 }
 
-export { loadResumeArtifact, latestResumeRun, templateDraft };
+export { loadResumeArtifact, latestResumeRun, latestResumeRunByIntent, templateDraft };

@@ -168,6 +168,24 @@ export async function latestResumeRun(jobId: string): Promise<ResumeRunRecord | 
   return row ? mapRun(row) : null;
 }
 
+export async function latestResumeRunByIntent(jobId: string, intent: ResumeIntent): Promise<ResumeRunRecord | null> {
+  const db = getDriver();
+  const row = await db.get<Row>(
+    "SELECT * FROM resume_runs WHERE job_id = ? AND intent = ? ORDER BY created_at DESC LIMIT 1",
+    [jobId, intent],
+  );
+  return row ? mapRun(row) : null;
+}
+
+export async function patchResumeRunSnapshot(id: string, snapshot: ResumeRunSnapshot): Promise<void> {
+  const db = getDriver();
+  await db.execute("UPDATE resume_runs SET snapshot_json = ?, updated_at = ? WHERE id = ?", [
+    JSON.stringify(snapshot),
+    nowIso(),
+    id,
+  ]);
+}
+
 export async function getResumeRun(id: string): Promise<ResumeRunRecord | null> {
   const db = getDriver();
   const row = await db.get<Row>("SELECT * FROM resume_runs WHERE id = ?", [id]);

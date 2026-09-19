@@ -7,6 +7,7 @@ import { resumeStudioEnabled } from "@/lib/resume/flags";
 import {
   approveResumeForJob,
   buildResumeForJob,
+  proposeResumeRewriteForJob,
   recordResumeIntent,
   reviewExistingResumeForJob,
 } from "@/lib/resume/service";
@@ -59,4 +60,14 @@ export async function approveResumeAction(jobId: string, formData: FormData): Pr
 
 export async function rebuildResumeAction(jobId: string): Promise<void> {
   await buildResumeAction(jobId);
+}
+
+export async function proposeResumeRewriteAction(jobId: string, formData: FormData): Promise<void> {
+  await bootApp();
+  if (!resumeStudioEnabled()) return;
+  const originalClaimId = String(formData.get("originalClaimId") || "").trim();
+  const text = String(formData.get("rewriteText") || "").trim();
+  if (!originalClaimId || !text) return;
+  await proposeResumeRewriteForJob(jobId, originalClaimId, text);
+  refresh(jobId);
 }
