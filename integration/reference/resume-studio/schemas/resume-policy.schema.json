@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:apply-os:resume-studio:resume-policy:1.0.0",
+  "title": "resume-policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "maxEntries",
+    "maxBulletsPerEntry",
+    "maxSummaryClaims",
+    "maxSkills",
+    "maxCredentialClaims",
+    "maxWords",
+    "timeoutMs",
+    "maxModelInputChars",
+    "maxRevisions",
+    "confidenceFloor",
+    "readyScore",
+    "revisionScore",
+    "weights",
+    "notApplicableDimensions",
+    "expectedPages",
+    "minFontSizePt"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "maxEntries": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4
+    },
+    "maxBulletsPerEntry": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4
+    },
+    "maxSummaryClaims": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "maxSkills": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "maxCredentialClaims": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "maxWords": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "maxModelInputChars": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "maxRevisions": {
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "confidenceFloor": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "readyScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "revisionScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role_evidence_match",
+        "stakeholder_evidence",
+        "technical_depth",
+        "quantified_impact",
+        "delivery_ownership",
+        "domain_alignment",
+        "keyword_alignment",
+        "evidence_verifiability",
+        "timeline_clarity"
+      ],
+      "properties": {
+        "role_evidence_match": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "stakeholder_evidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "technical_depth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "quantified_impact": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "delivery_ownership": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "domain_alignment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "keyword_alignment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "evidence_verifiability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "timeline_clarity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "notApplicableDimensions": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "role_evidence_match",
+          "stakeholder_evidence",
+          "technical_depth",
+          "quantified_impact",
+          "delivery_ownership",
+          "domain_alignment",
+          "keyword_alignment",
+          "evidence_verifiability",
+          "timeline_clarity"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "expectedPages": {
+      "const": 1
+    },
+    "minFontSizePt": {
+      "type": "number",
+      "minimum": 10
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "maxEntries": 4,
+  "maxBulletsPerEntry": 4,
+  "maxSummaryClaims": 2,
+  "maxSkills": 8,
+  "maxCredentialClaims": 6,
+  "maxWords": 650,
+  "maxRevisions": 1,
+  "timeoutMs": 20000,
+  "maxModelInputChars": 40000,
+  "confidenceFloor": 0.6,
+  "readyScore": 0.75,
+  "revisionScore": 0.6,
+  "weights": {
+    "role_evidence_match": 0.16,
+    "stakeholder_evidence": 0.2,
+    "technical_depth": 0.1,
+    "quantified_impact": 0.12,
+    "delivery_ownership": 0.1,
+    "domain_alignment": 0.12,
+    "keyword_alignment": 0.08,
+    "evidence_verifiability": 0.08,
+    "timeline_clarity": 0.04
+  },
+  "notApplicableDimensions": [],
+  "expectedPages": 1,
+  "minFontSizePt": 10.5
+}

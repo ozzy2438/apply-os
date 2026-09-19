@@ -1,10 +1,10 @@
-import { TypeSafeClient, type Questions, type SystemOneRequest, type SystemOneResult } from "@typesafe-ai/sdk";
+import { TypeSafeClient, type Questions, type RequestOptions, type SystemOneRequest, type SystemOneResult } from "@typesafe-ai/sdk";
 import { mockSystemOne } from "./mock";
 
 export type JevRuntime = {
   demo: boolean;
   model: string;
-  systemOne: <Q extends Questions>(request: SystemOneRequest<Q>) => Promise<SystemOneResult<Q>>;
+  systemOne: <Q extends Questions>(request: SystemOneRequest<Q>, options?: RequestOptions) => Promise<SystemOneResult<Q>>;
 };
 
 export function getJevRuntime(): JevRuntime {
@@ -20,7 +20,7 @@ export function getJevRuntime(): JevRuntime {
   return {
     demo: false,
     model: client.defaultModel,
-    systemOne: (request) => client.systemOne(request),
+    systemOne: (request, options) => client.systemOne(request, options),
   };
 }
 

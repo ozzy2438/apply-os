@@ -84,6 +84,10 @@ export const AUDIT_EVENTS = [
   "COVER_LETTER_GENERATED",
   "CLAIM_VERIFIED",
   "APPLICATION_STATUS_CHANGED",
+  "RESUME_BUILT",
+  "RESUME_APPROVED",
+  "RESUME_EXISTING_REVIEWED",
+  "RESUME_INTENT",
 ] as const;
 export type AuditEventType = (typeof AUDIT_EVENTS)[number];
 

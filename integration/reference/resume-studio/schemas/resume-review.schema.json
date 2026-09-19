@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:apply-os:resume-studio:resume-review:1.0.0",
+  "title": "resume-review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mode",
+    "status",
+    "requestedModel",
+    "resolvedModel",
+    "readinessScore",
+    "assessment",
+    "dimensions",
+    "fixOrder",
+    "errorCode",
+    "draftHash",
+    "rubricHash",
+    "policyHash"
+  ],
+  "properties": {
+    "mode": {
+      "enum": [
+        "live",
+        "mock"
+      ]
+    },
+    "status": {
+      "enum": [
+        "scored",
+        "unavailable"
+      ]
+    },
+    "requestedModel": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "resolvedModel": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "readinessScore": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "assessment": {
+      "enum": [
+        "READY_FOR_HUMAN_REVIEW",
+        "NEEDS_TARGETED_REVISION",
+        "NEEDS_MAJOR_REVISION",
+        "NEEDS_HUMAN_REVIEW",
+        "REVIEW_UNAVAILABLE"
+      ]
+    },
+    "dimensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "raw",
+          "normalised",
+          "confidence",
+          "weight",
+          "uncertain",
+          "weightedShortfall"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "role_evidence_match",
+              "stakeholder_evidence",
+              "technical_depth",
+              "quantified_impact",
+              "delivery_ownership",
+              "domain_alignment",
+              "keyword_alignment",
+              "evidence_verifiability",
+              "timeline_clarity"
+            ]
+          },
+          "raw": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 4
+          },
+          "normalised": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "uncertain": {
+            "type": "boolean"
+          },
+          "weightedShortfall": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "fixOrder": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "role_evidence_match",
+          "stakeholder_evidence",
+          "technical_depth",
+          "quantified_impact",
+          "delivery_ownership",
+          "domain_alignment",
+          "keyword_alignment",
+          "evidence_verifiability",
+          "timeline_clarity"
+        ]
+      },
+      "maxItems": 3,
+      "uniqueItems": true
+    },
+    "errorCode": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "draftHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "rubricHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "policyHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "scored"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readinessScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "dimensions": {
+            "minItems": 1
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "readinessScore": {
+            "type": "null"
+          },
+          "dimensions": {
+            "maxItems": 0
+          },
+          "assessment": {
+            "const": "REVIEW_UNAVAILABLE"
+          }
+        }
+      }
+    }
+  ]
+}

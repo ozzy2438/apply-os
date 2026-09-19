@@ -1,4 +1,9 @@
 import { addJobNote, approveSubmit, changeStatus, generateLetter } from "@/app/actions";
+import {
+  buildResumeAction,
+  selfPrepareResumeAction,
+  skipResumeAction,
+} from "@/app/resume-actions";
 import { DistBars, FitMeter, GateChips, pct } from "@/components/Decision";
 import { bootApp } from "@/lib/boot";
 import {
@@ -10,6 +15,8 @@ import {
 import { getCanonicalJob, hasApproval, latestJobEvaluationV2, listAudits, listNotes } from "@/lib/db/store-extended";
 import { explanationFromEvaluation } from "@/lib/policy/compose";
 import { STATUSES } from "@/lib/jev/types";
+import { resumeStudioEnabled } from "@/lib/resume/flags";
+import { latestResumeRun } from "@/lib/resume/persist";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
@@ -29,6 +36,9 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
   const notes = await listNotes(id);
   const audits = await listAudits(8, id);
   const submitApproved = await hasApproval(id, "SUBMIT");
+  const resumeEnabled = resumeStudioEnabled();
+  const resumeRun = resumeEnabled ? await latestResumeRun(id) : null;
+  const resumeReady = resumeRun?.status === "READY";
 
   return (
     <main className="space-y-6">
@@ -129,6 +139,7 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
         <ul className="space-y-1 font-mono text-xs text-mute">
           <li>{v2 && v2.finalDecision !== "SKIP" ? "✓" : "○"} Policy did not hard-skip</li>
           <li>{letter?.check.ready ? "✓" : "○"} Cover letter claims verified (Ready gate)</li>
+          <li>{resumeReady ? "✓" : "○"} Resume Ready (claim-safe draft, separate from Role Fit)</li>
           <li>{submitApproved ? "✓" : "○"} Explicit submit / Applied approval</li>
           <li>○ No automatic submit — you send it</li>
         </ul>
@@ -138,6 +149,51 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
           </button>
         </form>
       </section>
+
+      {resumeEnabled ? (
+        <section className="border border-line bg-panel p-4">
+          <h3 className="mb-2 font-mono text-xs uppercase text-brass">Resume Studio</h3>
+          <p className="mb-3 text-sm text-mute">
+            Role Fit above is the job decision. Resume Readiness is a later, evidence-bound draft. Nothing
+            starts until you choose.
+          </p>
+          <p className="mb-3 font-mono text-[10px] uppercase text-mute">
+            {resumeRun
+              ? `Last run ${resumeRun.status} · readiness ${
+                  resumeRun.snapshot.resumeReadiness == null ? "—" : pct(resumeRun.snapshot.resumeReadiness)
+                } · ${resumeRun.snapshot.reviewLabel ?? "no QA"}`
+              : "No resume run yet"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <form action={buildResumeAction.bind(null, opportunity.id)}>
+              <button type="submit" className="border border-brass px-3 py-1.5 font-mono text-xs text-brass">
+                Build my resume
+              </button>
+            </form>
+            <form action={selfPrepareResumeAction.bind(null, opportunity.id)}>
+              <button type="submit" className="border border-line px-3 py-1.5 font-mono text-xs">
+                I will prepare this myself
+              </button>
+            </form>
+            <Link
+              href={`/opportunities/${opportunity.id}/resume`}
+              className="border border-line px-3 py-1.5 font-mono text-xs text-paper hover:border-brass"
+            >
+              Check my existing CV
+            </Link>
+            <form action={skipResumeAction.bind(null, opportunity.id)}>
+              <button type="submit" className="border border-line px-3 py-1.5 font-mono text-xs text-mute">
+                Skip for now
+              </button>
+            </form>
+          </div>
+          {resumeRun?.intent === "build" ? (
+            <Link href={`/opportunities/${opportunity.id}/resume`} className="mt-3 inline-block text-xs text-brass">
+              Open plan / draft / QA
+            </Link>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="border border-line bg-panel p-4">
         <h3 className="mb-3 font-mono text-xs uppercase text-brass">Pipeline status</h3>
