@@ -4,11 +4,12 @@ import { sha256 } from "@/lib/domain/hash";
 import { buildEvaluation } from "@/lib/policy/compose";
 import { POLICY_VERSION } from "@/lib/policy/version";
 import { getDecisionProvider } from "@/lib/providers/factory";
+import { evidenceReadiness } from "@/lib/policy/evidence";
 import { loadCanonicalBundle } from "./load";
-import { canonicalEvidenceToRows, mapCanonicalToRules } from "./map";
+import { canonicalEvidenceToRows } from "./map";
 import { retrieveRelevantEvidence } from "./retrieve";
 import { evidenceCoverage, extractJobRequirements, matchRequirementsToEvidence } from "./requirements";
-import { EVALUATION_SCHEMA_VERSION, PROFILE_VERSION_NUMBER, type EvidenceMatch, type JobRequirement, type TriageBucket } from "./types";
+import { EVALUATION_SCHEMA_VERSION, type EvidenceMatch, type JobRequirement, type TriageBucket } from "./types";
 import { triageJob, type TriageResult } from "@/lib/policy/triage";
 
 export function jobInputHash(job: JobPosting): string {
@@ -96,7 +97,7 @@ export async function evaluateCanonicalJob(input: {
   deepReviewRan: boolean;
 }> {
   const { profile, policy } = loadCanonicalBundle();
-  const rules = input.rules.version >= PROFILE_VERSION_NUMBER ? input.rules : mapCanonicalToRules(profile);
+  const rules = input.rules;
   const triage = triageJob({
     job: input.job,
     rules,
@@ -160,7 +161,9 @@ export async function evaluateCanonicalJob(input: {
     candidateProfileVersion: rules.version,
     deterministic: input.deterministic,
     decision,
-    evidenceReady: deepReviewRan && coverage >= 0.45,
+    evidenceReady:
+      deepReviewRan &&
+      (coverage >= 0.45 || evidenceReadiness(input.job, input.dbEvidence ?? [], rules) >= 0.45),
     evaluatedAt: new Date().toISOString(),
     thresholds: {
       applyMinimumScore: rules.applicationRules.applyRecommendationMinimumScore,
