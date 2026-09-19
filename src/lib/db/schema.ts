@@ -53,6 +53,37 @@ export const briefings = sqliteTable("briefings", {
   createdAt: text("created_at").notNull(),
 });
 
+export const candidateEvidence = sqliteTable("candidate_evidence", {
+  id: text("id").primaryKey(),
+  candidateProfileId: text("candidate_profile_id").notNull(),
+  type: text("type").notNull(),
+  claim: text("claim").notNull(),
+  sourceReference: text("source_reference").notNull(),
+  sourceText: text("source_text").notNull(),
+  skillsJson: text("skills_json").notNull(),
+  domainsJson: text("domains_json").notNull(),
+  yearsOfExperience: integer("years_of_experience"),
+  verified: integer("verified", { mode: "boolean" }).notNull(),
+  verificationMethod: text("verification_method").notNull(),
+});
+
+export const decisionAudits = sqliteTable("decision_audits", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  jobId: text("job_id"),
+  eventType: text("event_type").notNull(),
+  profileVersion: integer("profile_version"),
+  policyVersion: text("policy_version"),
+  modelProvider: text("model_provider"),
+  modelVersion: text("model_version"),
+  inputHash: text("input_hash"),
+  observationVersion: text("observation_version"),
+  decisionSummaryJson: text("decision_summary_json").notNull(),
+  policyResultJson: text("policy_result_json").notNull(),
+  executionResultJson: text("execution_result_json").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
 export const statusEvents = sqliteTable("status_events", {
   id: text("id").primaryKey(),
   opportunityId: text("opportunity_id").notNull(),

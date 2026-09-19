@@ -1,4 +1,4 @@
-import { changeStatus, generateLetter } from "@/app/actions";
+import { addJobNote, approveSubmit, changeStatus, generateLetter } from "@/app/actions";
 import { DistBars, FitMeter, GateChips, pct } from "@/components/Decision";
 import { bootApp } from "@/lib/boot";
 import {
@@ -7,8 +7,11 @@ import {
   latestEvaluation,
   listStatusEvents,
 } from "@/lib/db/store";
+import { getCanonicalJob, hasApproval, latestJobEvaluationV2, listAudits, listNotes } from "@/lib/db/store-extended";
+import { explanationFromEvaluation } from "@/lib/policy/compose";
 import { STATUSES } from "@/lib/jev/types";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +24,11 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
   const letter = await latestCoverLetter(id);
   const events = await listStatusEvents(id);
   const composed = evaluation?.composed;
+  const v2 = await latestJobEvaluationV2(id);
+  const canonical = await getCanonicalJob(id);
+  const notes = await listNotes(id);
+  const audits = await listAudits(8, id);
+  const submitApproved = await hasApproval(id, "SUBMIT");
 
   return (
     <main className="space-y-6">
@@ -78,6 +86,50 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
           </div>
         </section>
       ) : null}
+
+      {v2 ? (
+        <section className="border border-line bg-panel p-4">
+          <h3 className="mb-2 font-mono text-xs uppercase text-brass">Structured explanation</h3>
+          <pre className="whitespace-pre-wrap text-sm text-paper">{explanationFromEvaluation(v2)}</pre>
+          {v2.deterministicResults.hardBlockers.length ? (
+            <ul className="mt-3 list-disc pl-5 text-sm text-clay">
+              {v2.deterministicResults.hardBlockers.map((b) => (
+                <li key={b}>{b}</li>
+              ))}
+            </ul>
+          ) : null}
+          {canonical ? (
+            <p className="mt-3 font-mono text-[10px] text-mute">
+              Extract confidence {pct(canonical.extractionConfidence)} · {canonical.workplaceType} ·{" "}
+              {canonical.seniority} · {canonical.country ?? "country unknown"}
+              {canonical.sourceUrl ? (
+                <>
+                  {" "}
+                  ·{" "}
+                  <a className="text-brass" href={canonical.sourceUrl} target="_blank" rel="noreferrer">
+                    Open source
+                  </a>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section className="border border-line bg-panel p-4">
+        <h3 className="mb-3 font-mono text-xs uppercase text-brass">Application checklist</h3>
+        <ul className="space-y-1 font-mono text-xs text-mute">
+          <li>{v2 && v2.finalDecision !== "SKIP" ? "✓" : "○"} Policy did not hard-skip</li>
+          <li>{letter?.check.ready ? "✓" : "○"} Cover letter claims verified (Ready gate)</li>
+          <li>{submitApproved ? "✓" : "○"} Explicit submit / Applied approval</li>
+          <li>○ No automatic submit — you send it</li>
+        </ul>
+        <form action={approveSubmit.bind(null, opportunity.id)} className="mt-3">
+          <button type="submit" className="border border-brass px-3 py-1.5 font-mono text-xs text-brass">
+            I confirm I will submit this myself
+          </button>
+        </form>
+      </section>
 
       <section className="border border-line bg-panel p-4">
         <h3 className="mb-3 font-mono text-xs uppercase text-brass">Pipeline status</h3>
@@ -153,11 +205,58 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
                   </li>
                 ))}
               </ul>
+              {letter.check.atomic?.length ? (
+                <ul className="mt-4 space-y-2">
+                  {letter.check.atomic.map((a, i) => (
+                    <li key={i} className="border border-line p-2 text-xs">
+                      <p className="font-mono text-[10px] uppercase text-brass">
+                        {a.status} · {a.category} · {a.requiredAction}
+                      </p>
+                      <p className="text-paper">{a.explanation}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           </div>
         ) : (
           <p className="text-sm text-mute">No letter yet. Draft one to run citation and guard checks.</p>
         )}
+      </section>
+
+      <section className="border border-line bg-panel p-4">
+        <h3 className="mb-2 font-mono text-xs uppercase text-brass">Local note</h3>
+        <form action={addJobNote.bind(null, opportunity.id)} className="mb-3 flex gap-2">
+          <input
+            name="note"
+            className="flex-1 border border-line bg-ink px-3 py-2 text-sm"
+            placeholder="Why this is interesting, or what is missing"
+          />
+          <button type="submit" className="border border-line px-3 py-2 font-mono text-xs">
+            Add
+          </button>
+        </form>
+        <ul className="space-y-1 text-sm text-mute">
+          {notes.map((n) => (
+            <li key={n.id}>
+              {n.createdAt} — {n.body}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="border border-line bg-panel p-4">
+        <h3 className="mb-2 font-mono text-xs uppercase text-brass">Decision timeline</h3>
+        <ul className="space-y-1 font-mono text-[10px] text-mute">
+          {audits.map((a) => (
+            <li key={a.id}>
+              {a.createdAt} · {a.eventType} · {a.modelProvider ?? "policy"}
+            </li>
+          ))}
+        </ul>
+        <Link href="/audit" className="mt-2 inline-block text-xs text-brass">
+          Full audit
+        </Link>
       </section>
 
       <section className="border border-line bg-panel p-4">

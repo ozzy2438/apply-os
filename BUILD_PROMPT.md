@@ -107,9 +107,20 @@ Visual language: dense decision console (distribution bars, confidence). Not gen
 
 8–10 realistic Australian Data Scientist / AI Engineer postings plus a sample Melbourne profile (synthetic CV; not a private résumé). Mix high-fit, stretch, and should-skip.
 
+## Discovery layer (additive)
+
+A Job Discovery Assistant sits on top of V1. It does **not** replace the decision engine.
+
+- Four layers: deterministic policy, Jev structured decisions, generative writing, browser observation/execution.
+- Jev never writes letters, JS, selectors, or Playwright.
+- Browser assist is feature-flagged (`APPLY_OS_BROWSER_ASSIST`). Demo mode uses a simulated board only.
+- No autonomous apply, message, upload, payment, or terms acceptance.
+
+See `docs/ARCHITECTURE.md`.
+
 ## Out of scope
 
-LinkedIn/Gmail scraping, ATS auto-submit, multi-user SaaS, billing, recruiter OAuth, chat UIs that treat Jev as a text generator.
+LinkedIn/Gmail scraping, ATS auto-submit, multi-user SaaS, billing, recruiter OAuth, chat UIs that treat Jev as a text generator, autonomous mass-application bots.
 
 ## Quality bar
 

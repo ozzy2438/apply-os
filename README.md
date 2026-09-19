@@ -38,6 +38,7 @@ npm run build
 | `OPENAI_API_KEY` | No | Cover-letter drafts via OpenAI / Netlify AI Gateway. Template fallback otherwise. |
 | `OPENAI_BASE_URL` | No | Override API base (Netlify AI Gateway). |
 | `NETLIFY_DATABASE_URL` | No | Postgres. Local default is SQLite at `.data/apply-os.db`. |
+| `APPLY_OS_BROWSER_ASSIST` | No | Enable real Playwright. Demo mode still never opens a browser. |
 
 TypeSafe credentials are used **server-side only**.
 
@@ -58,8 +59,13 @@ See [`src/lib/jev/questions.ts`](./src/lib/jev/questions.ts) for every question 
 | `/inbox` | Every ingested opportunity |
 | `/opportunities/[id]` | Score breakdown, letter, citations, status |
 | `/pipeline` | Kanban |
-| `/profile` | CV evidence, goals, constraints, weights |
-| `/ingest` | Paste a posting or recruiter note |
+| `/profile` | CV evidence, goals, constraints, weights, rules |
+| `/ingest` | Paste a posting, URL, or recruiter note |
+| `/discover` | Job Discovery Assistant (read-only, simulated in demo) |
+| `/evidence` | Verified evidence library |
+| `/audit` | Decision / approval timeline |
+
+Architecture: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md). Security notes: [`docs/SECURITY.md`](./docs/SECURITY.md). Setup: [`docs/SETUP.md`](./docs/SETUP.md).
 
 ## Deploy (Netlify)
 

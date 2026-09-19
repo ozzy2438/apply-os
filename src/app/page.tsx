@@ -2,9 +2,12 @@ import { bootApp } from "@/lib/boot";
 import { ensureTodayBriefing } from "@/lib/briefing-service";
 import { formatMelbourne } from "@/lib/time";
 import { getBriefing, getOpportunity, latestEvaluation, listOpportunities, listLatestEvaluations } from "@/lib/db/store";
+import { latestJobEvaluationV2 } from "@/lib/db/store-extended";
 import { OpportunityCard } from "@/components/Decision";
 import { refreshBriefingAction } from "@/app/actions";
 import { briefingDate, selectMorningDesk } from "@/lib/jev/briefing";
+import Link from "next/link";
+import { explanationFromEvaluation } from "@/lib/policy/compose";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +21,9 @@ export default async function MorningDeskPage() {
   for (const id of ids) {
     const opportunity = await getOpportunity(id);
     const evaluation = await latestEvaluation(id);
+    const v2 = await latestJobEvaluationV2(id);
     if (opportunity && evaluation) {
-      cards.push({ opportunity, composed: evaluation.composed });
+      cards.push({ opportunity, composed: evaluation.composed, v2 });
     }
   }
 
@@ -42,34 +46,48 @@ export default async function MorningDeskPage() {
           <p className="font-mono text-xs text-brass">{formatMelbourne()} · Australia/Melbourne</p>
           <h2 className="text-xl text-paper">Today&apos;s 3–5</h2>
           <p className="max-w-2xl text-sm text-mute">
-            Eligible means high-confidence apply/tailor, no hard-gate fail, not already closed. Ranked by
-            fit × action confidence. Weights can change without re-calling Jev.
+            Ranked by fit, recency, evidence readiness, strategic value, preference, and company diversity —
+            not keyword search. Code owns the weights.
           </p>
         </div>
-        <form action={refreshBriefingAction}>
-          <button
-            type="submit"
-            className="border border-line bg-panel-2 px-3 py-1.5 font-mono text-xs text-paper hover:border-brass"
-          >
-            Rebuild desk
-          </button>
-        </form>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/ingest" className="border border-line px-3 py-1.5 font-mono text-xs hover:border-brass">
+            Paste a job
+          </Link>
+          <Link href="/discover" className="border border-line px-3 py-1.5 font-mono text-xs hover:border-brass">
+            Discovery assistant
+          </Link>
+          <form action={refreshBriefingAction}>
+            <button
+              type="submit"
+              className="border border-line bg-panel-2 px-3 py-1.5 font-mono text-xs text-paper hover:border-brass"
+            >
+              Rebuild desk
+            </button>
+          </form>
+        </div>
       </div>
 
       {cards.length === 0 ? (
         <div className="border border-line bg-panel p-8 text-sm text-mute">
           No desk-eligible roles today ({eligibleCount} currently eligible after filters). Ingest a posting or
-          wait in the review queue.
+          start a read-only discovery session.
         </div>
       ) : (
         <div className="grid gap-3">
           {cards.map((card) => (
-            <OpportunityCard
-              key={card.opportunity.id}
-              opportunity={card.opportunity}
-              composed={card.composed}
-              href={`/opportunities/${card.opportunity.id}`}
-            />
+            <div key={card.opportunity.id} className="space-y-2">
+              <OpportunityCard
+                opportunity={card.opportunity}
+                composed={card.composed}
+                href={`/opportunities/${card.opportunity.id}`}
+              />
+              {card.v2 ? (
+                <pre className="whitespace-pre-wrap border border-line bg-panel-2 p-3 font-mono text-[11px] text-mute">
+                  {explanationFromEvaluation(card.v2)}
+                </pre>
+              ) : null}
+            </div>
           ))}
         </div>
       )}

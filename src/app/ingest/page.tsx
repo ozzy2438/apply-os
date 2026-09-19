@@ -21,7 +21,8 @@ export default async function IngestPage({
     <main className="max-w-3xl">
       <h2 className="mb-1 text-xl text-paper">Ingest</h2>
       <p className="mb-6 text-sm text-mute">
-        Paste a posting or recruiter note. Optional URL fetch is best-effort. One batched Jev call follows.
+        Paste text, paste a URL, or use the manual fields. Hard filters run before Jev. Live Playwright URL
+        import is off unless browser assist is enabled and you are not in demo mode.
       </p>
       {error ? <p className="mb-4 border border-clay px-3 py-2 text-sm text-clay">{error}</p> : null}
       <form action={action} className="space-y-4 border border-line bg-panel p-5">
@@ -46,10 +47,9 @@ export default async function IngestPage({
           />
         </label>
         <label className="block font-mono text-xs text-mute">
-          Raw text
+          Raw text (or leave blank if the URL can be fetched)
           <textarea
             name="rawText"
-            required
             rows={16}
             className="mt-1 block w-full border border-line bg-ink px-3 py-2 font-mono text-sm text-paper"
             placeholder="Title: ...\nCompany: ...\nLocation: ...\n"

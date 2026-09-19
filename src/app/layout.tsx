@@ -20,7 +20,7 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Apply OS — career decision engine",
   description:
-    "Score job postings against your CV and goals with typed Jev decisions. Morning desk, citation-checked letters, pipeline.",
+    "Score job postings against your CV and goals with typed Jev decisions. Morning desk, citation-checked letters, safe discovery assistant, pipeline.",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

@@ -142,11 +142,22 @@ export type GuardResult = {
   failed: boolean;
 };
 
+export type AtomicClaimRecord = {
+  text: string;
+  category: string;
+  status: string;
+  confidence: number;
+  requiredAction: string;
+  explanation: string;
+  matchingEvidenceIds: string[];
+};
+
 export type CoverLetterCheck = {
   citations: CitationResult[];
   guards: GuardResult[];
   ready: boolean;
   blockers: string[];
+  atomic?: AtomicClaimRecord[];
 };
 
 export type Opportunity = {

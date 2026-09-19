@@ -3,6 +3,19 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import postgres from "postgres";
 import { DDL } from "./ddl";
+import { ALTERS, DDL_V2 } from "./migrate";
+
+function applyMigrations(exec: (sql: string) => void) {
+  for (const stmt of DDL) exec(stmt);
+  for (const stmt of DDL_V2) exec(stmt);
+  for (const stmt of ALTERS) {
+    try {
+      exec(stmt);
+    } catch {
+      // additive column already present
+    }
+  }
+}
 
 export type SqlDriver = {
   dialect: "sqlite" | "postgres";
@@ -16,11 +29,11 @@ function toPg(sql: string): string {
   return sql.replace(/\?/g, () => `$${++i}`);
 }
 
-function sqliteDriver(file = path.join(process.cwd(), ".data", "apply-os.db")): SqlDriver {
+export function sqliteDriver(file = path.join(process.cwd(), ".data", "apply-os.db")): SqlDriver {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const db = new Database(file);
   db.pragma("journal_mode = WAL");
-  for (const stmt of DDL) db.exec(stmt);
+  applyMigrations((sql) => db.exec(sql));
   return {
     dialect: "sqlite",
     async execute(sql: string, params: unknown[] = []) {
@@ -42,6 +55,14 @@ function postgresDriver(url: string): SqlDriver {
     if (!ready) {
       ready = (async () => {
         for (const stmt of DDL) await sql.unsafe(stmt);
+        for (const stmt of DDL_V2) await sql.unsafe(stmt);
+        for (const stmt of ALTERS) {
+          try {
+            await sql.unsafe(stmt);
+          } catch {
+            // additive column already present
+          }
+        }
       })();
     }
     await ready;

@@ -4,11 +4,27 @@ import { citationVerdict, composeCoverLetterCheck, guardResult } from "./citatio
 import { getJevRuntime } from "./client";
 import type { Claim, CoverLetterCheck, Profile } from "./types";
 import type { ChoiceLike, NoulLike } from "./compose";
+import { extractAtomicClaims } from "@/lib/claims/extract";
+import { claimExplanation, letterReadyFromClaims } from "@/lib/claims/policy";
+import { evidenceFromBullets } from "@/lib/policy/evidence";
+import { getDecisionProvider } from "@/lib/providers/factory";
+import type { CandidateEvidence, JobPosting } from "@/lib/domain/schemas";
+import { normalizeJobPosting } from "@/lib/ingest/normalize";
+
+function fallbackJob(profile: Profile): JobPosting {
+  return normalizeJobPosting({
+    id: "letter-context",
+    rawText: `Title: Role\nCompany: Company\nLocation: Melbourne\n${profile.goals}`,
+    sourceType: "job_posting",
+  });
+}
 
 export async function checkCoverLetter(input: {
   body: string;
   claims: Claim[];
   profile: Profile;
+  evidence?: CandidateEvidence[];
+  job?: JobPosting;
 }): Promise<CoverLetterCheck> {
   const runtime = getJevRuntime();
   const citations = [];
@@ -42,5 +58,40 @@ export async function checkCoverLetter(input: {
     guardResult(id, guardsResult.answers[id] as NoulLike),
   );
 
-  return composeCoverLetterCheck(citations, guards);
+  const base = composeCoverLetterCheck(citations, guards);
+  const evidence = input.evidence ?? evidenceFromBullets(input.profile.bullets);
+  const job = input.job ?? fallbackJob(input.profile);
+  const provider = getDecisionProvider();
+  const atoms = extractAtomicClaims(input.body, input.claims);
+  const atomic = [];
+  for (const claim of atoms) {
+    const decision = await provider.verifyClaim({ claim, candidateEvidence: evidence, job });
+    const labels = evidence.filter((e) => decision.matchingEvidenceIds.includes(e.id)).map((e) => e.claim);
+    atomic.push({
+      text: claim.text,
+      category: claim.claimCategory,
+      status: decision.status,
+      confidence: decision.confidence,
+      requiredAction: decision.requiredAction,
+      explanation: claimExplanation({ text: claim.text, decision, evidenceLabels: labels }),
+      matchingEvidenceIds: decision.matchingEvidenceIds,
+    });
+  }
+  const extra = letterReadyFromClaims(
+    atomic.map((a) => ({
+      status: a.status as "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED" | "AMBIGUOUS",
+      confidence: a.confidence,
+      matchingEvidenceIds: a.matchingEvidenceIds,
+      requiredAction: a.requiredAction as "ALLOW" | "REVIEW" | "BLOCK",
+    })),
+    true,
+  );
+
+  const blockers = [...base.blockers, ...extra.blockers];
+  return {
+    ...base,
+    atomic,
+    blockers,
+    ready: base.ready && extra.ready,
+  };
 }

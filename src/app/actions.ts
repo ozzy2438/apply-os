@@ -2,9 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { bootApp } from "@/lib/boot";
-import { parsePosting, stripHtml } from "@/lib/parse";
-import { evaluateOpportunity } from "@/lib/jev/evaluate";
-import { suggestedStatus } from "@/lib/jev/compose";
+import { stripHtml } from "@/lib/parse";
 import { draftCoverLetter } from "@/lib/cover-letter";
 import { checkCoverLetter } from "@/lib/jev/check-letter";
 import { ensureTodayBriefing } from "@/lib/briefing-service";
@@ -14,13 +12,31 @@ import {
   getOpportunity,
   getProfile,
   insertCoverLetter,
-  insertEvaluation,
-  insertOpportunity,
   latestCoverLetter,
   recomposeAll,
   saveProfile,
   updateOpportunityStatus,
 } from "@/lib/db/store";
+import { ingestCanonical } from "@/lib/ingest/pipeline";
+import {
+  getCandidateRules,
+  getCanonicalJob,
+  hasApproval,
+  insertApproval,
+  insertAudit,
+  insertNote,
+  listEvidence,
+  replaceEvidence,
+  saveCandidateRules,
+  upsertEvidence,
+} from "@/lib/db/store-extended";
+import { evidenceFromBullets } from "@/lib/policy/evidence";
+import { playwrightExtractUrl } from "@/lib/browser/playwright";
+import { liveBrowserAllowed } from "@/lib/browser/flags";
+import { DEFAULT_CANDIDATE_PROFILE } from "@/lib/domain/defaults";
+import { candidateEvidenceSchema } from "@/lib/domain/schemas";
+import { getGenerationProvider } from "@/lib/providers/factory";
+import { POLICY_VERSION } from "@/lib/policy/version";
 
 async function requireProfile() {
   await bootApp();
@@ -35,60 +51,76 @@ export async function ingestOpportunity(formData: FormData): Promise<{ id: strin
   const url = String(formData.get("url") || "").trim() || null;
   let raw = String(formData.get("rawText") || "").trim();
   if (!raw && url) {
-    try {
-      const response = await fetch(url, { headers: { "User-Agent": "ApplyOS/1.0" }, signal: AbortSignal.timeout(8000) });
-      const html = await response.text();
-      raw = stripHtml(html).slice(0, 20000);
-    } catch {
-      return { error: "Could not fetch that URL." };
+    if (liveBrowserAllowed()) {
+      const extracted = await playwrightExtractUrl(url);
+      if (extracted.ok) raw = extracted.text;
+    }
+    if (!raw) {
+      try {
+        const response = await fetch(url, { headers: { "User-Agent": "ApplyOS/1.0" }, signal: AbortSignal.timeout(8000) });
+        const html = await response.text();
+        raw = stripHtml(html).slice(0, 20000);
+      } catch {
+        return { error: "Could not fetch that URL." };
+      }
     }
   }
-  if (!raw) return { error: "Paste a posting or recruiter note." };
+  if (!raw) return { error: "Paste a posting, use the form, or supply a URL." };
 
-  const parsed = parsePosting(raw, sourceType === "recruiter_inbound" ? "recruiter_inbound" : "job_posting", url);
-  const opportunity = await insertOpportunity({ ...parsed, status: "inbox" });
-  const evaluation = await evaluateOpportunity(
-    {
-      posting: parsed,
-      profile: {
-        goals: profile.goals,
-        constraints: profile.constraints,
-        cv: profile.bullets,
-      },
-    },
-    profile.weights,
-  );
-  await insertEvaluation({
-    opportunityId: opportunity.id,
-    model: evaluation.model,
-    demo: evaluation.demo,
-    answers: evaluation.answers,
-    composed: evaluation.composed,
-  });
-  const status = suggestedStatus(evaluation.composed);
-  if (status !== "inbox") {
-    await updateOpportunityStatus(opportunity.id, status, "auto-status from Jev compose");
-  }
+  const result = await ingestCanonical({ rawText: raw, url, sourceType, profile });
   await ensureTodayBriefing(true);
   revalidatePath("/");
   revalidatePath("/inbox");
   revalidatePath("/pipeline");
-  return { id: opportunity.id };
+  revalidatePath("/audit");
+  return { id: result.opportunityId };
 }
 
 export async function changeStatus(opportunityId: string, formData: FormData): Promise<void> {
   await bootApp();
   const status = String(formData.get("status") || "") as Status;
   if (!STATUSES.includes(status)) return;
+  const current = await getOpportunity(opportunityId);
+  if (!current) return;
   if (status === "ready") {
     const letter = await latestCoverLetter(opportunityId);
     if (!letter?.check.ready) return;
   }
+  if (status === "applied") {
+    const approved = await hasApproval(opportunityId, "SUBMIT");
+    if (!approved) return;
+  }
   await updateOpportunityStatus(opportunityId, status, "manual");
+  await insertAudit({
+    userId: "default",
+    jobId: opportunityId,
+    eventType: "APPLICATION_STATUS_CHANGED",
+    profileVersion: (await getCandidateRules()).version,
+    policyVersion: POLICY_VERSION,
+    modelProvider: null,
+    modelVersion: null,
+    inputHash: null,
+    observationVersion: null,
+    decisionSummary: { from: current.status, to: status },
+    policyResult: {},
+    executionResult: {},
+  });
   await ensureTodayBriefing(true);
   revalidatePath("/");
   revalidatePath("/inbox");
   revalidatePath("/pipeline");
+  revalidatePath("/audit");
+  revalidatePath(`/opportunities/${opportunityId}`);
+}
+
+export async function approveSubmit(opportunityId: string): Promise<void> {
+  await bootApp();
+  await insertApproval({
+    sessionId: null,
+    jobId: opportunityId,
+    kind: "SUBMIT",
+    summary: "User confirmed application submission / Applied status.",
+  });
   revalidatePath(`/opportunities/${opportunityId}`);
 }
 
@@ -97,14 +129,60 @@ export async function generateLetter(opportunityId: string, formData?: FormData)
   const profile = await requireProfile();
   const opportunity = await getOpportunity(opportunityId);
   if (!opportunity) return;
+  const evidence = await listEvidence();
+  const job = await getCanonicalJob(opportunityId);
   const draft = await draftCoverLetter(profile, opportunity);
-  const check = await checkCoverLetter({ body: draft.body, claims: draft.claims, profile });
+  const check = await checkCoverLetter({
+    body: draft.body,
+    claims: draft.claims,
+    profile,
+    evidence: evidence.length ? evidence : evidenceFromBullets(profile.bullets),
+    job: job ?? undefined,
+  });
   await insertCoverLetter({
     opportunityId,
     body: draft.body,
     claims: draft.claims,
     check,
   });
+  await insertAudit({
+    userId: "default",
+    jobId: opportunityId,
+    eventType: "COVER_LETTER_GENERATED",
+    profileVersion: (await getCandidateRules()).version,
+    policyVersion: POLICY_VERSION,
+    modelProvider: "DEMO",
+    modelVersion: draft.source,
+    inputHash: null,
+    observationVersion: null,
+    decisionSummary: { ready: check.ready, blockers: check.blockers },
+    policyResult: { atomic: check.atomic ?? [] },
+    executionResult: {},
+  });
+  revalidatePath(`/opportunities/${opportunityId}`);
+  revalidatePath("/audit");
+}
+
+export async function draftRecruiterReply(opportunityId: string): Promise<{ body: string }> {
+  const profile = await requireProfile();
+  const job = await getCanonicalJob(opportunityId);
+  const rules = await getCandidateRules();
+  const evidence = await listEvidence();
+  if (!job) return { body: "Import/normalize the job before drafting a recruiter reply." };
+  const gen = getGenerationProvider();
+  const message = await gen.draftRecruiterMessage({
+    job,
+    candidate: rules,
+    evidence: evidence.length ? evidence : evidenceFromBullets(profile.bullets),
+  });
+  return { body: message.body };
+}
+
+export async function addJobNote(opportunityId: string, formData: FormData): Promise<void> {
+  await bootApp();
+  const body = String(formData.get("note") || "").trim();
+  if (!body) return;
+  await insertNote(opportunityId, body);
   revalidatePath(`/opportunities/${opportunityId}`);
 }
 
@@ -139,11 +217,71 @@ export async function saveProfileAction(formData: FormData): Promise<void> {
     .filter((b) => b.text.length > 0);
 
   await saveProfile({ goals, constraints, weights, bullets });
+
+  const existingRules = await getCandidateRules();
+  const list = (name: string) =>
+    String(formData.get(name) || "")
+      .split(/\n|,/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  await saveCandidateRules({
+    ...existingRules,
+    ...DEFAULT_CANDIDATE_PROFILE,
+    ...existingRules,
+    version: existingRules.version + 1,
+    targetRoles: list("targetRoles").length ? list("targetRoles") : existingRules.targetRoles,
+    excludedRoles: list("excludedRoles"),
+    explicitRedFlags: list("explicitRedFlags"),
+    preferredLocations: constraints.locations.length ? constraints.locations : existingRules.preferredLocations,
+    minimumSalary: {
+      ...existingRules.minimumSalary,
+      amount: constraints.compensationFloorAud || existingRules.minimumSalary.amount,
+    },
+    maxJobAgeDays: Number(formData.get("maxJobAgeDays") || existingRules.maxJobAgeDays),
+    applicationRules: {
+      ...existingRules.applicationRules,
+      applyRecommendationMinimumScore: Number(formData.get("applyMin") || existingRules.applicationRules.applyRecommendationMinimumScore),
+      minimumDecisionConfidence: Number(formData.get("minConfidence") || existingRules.applicationRules.minimumDecisionConfidence),
+    },
+  });
+  const existingEvidence = await listEvidence();
+  const kept = existingEvidence.filter((e) => e.verificationMethod !== "CV_EXTRACTED");
+  await replaceEvidence([
+    ...evidenceFromBullets(bullets.map((b, i) => ({ id: b.id || `b-${i}`, text: b.text, kind: b.kind }))),
+    ...kept,
+  ]);
   await recomposeAll();
   await ensureTodayBriefing(true);
   revalidatePath("/");
   revalidatePath("/profile");
+  revalidatePath("/evidence");
   revalidatePath("/inbox");
+}
+
+export async function saveEvidenceAction(formData: FormData): Promise<void> {
+  await bootApp();
+  const parsed = candidateEvidenceSchema.parse({
+    id: String(formData.get("id") || `ev-${Date.now()}`),
+    candidateProfileId: "default",
+    type: String(formData.get("type") || "PROJECT"),
+    claim: String(formData.get("claim") || ""),
+    sourceReference: String(formData.get("sourceReference") || "manual"),
+    sourceText: String(formData.get("sourceText") || formData.get("claim") || ""),
+    skills: String(formData.get("skills") || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    domains: String(formData.get("domains") || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    yearsOfExperience: null,
+    verified: String(formData.get("verified") || "true") === "true",
+    verificationMethod: String(formData.get("verificationMethod") || "USER_CONFIRMED"),
+  });
+  if (!parsed.claim.trim()) return;
+  await upsertEvidence(parsed);
+  revalidatePath("/evidence");
 }
 
 export async function refreshBriefingAction(): Promise<void> {

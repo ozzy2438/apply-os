@@ -1,6 +1,7 @@
 import { saveProfileAction } from "@/app/actions";
 import { bootApp } from "@/lib/boot";
 import { getProfile } from "@/lib/db/store";
+import { getCandidateRules } from "@/lib/db/store-extended";
 import { BULLET_KINDS, DIMENSION_IDS } from "@/lib/jev/types";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function ProfilePage() {
   await bootApp();
   const profile = await getProfile();
+  const rules = await getCandidateRules();
   if (!profile) return <p>No profile.</p>;
 
   const extraSlots = 2;
@@ -72,6 +74,32 @@ export default async function ProfilePage() {
             className="mt-1 block w-full border border-line bg-ink px-3 py-2 text-sm text-paper"
           />
         </label>
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="block font-mono text-xs text-mute">
+            Target roles
+            <textarea name="targetRoles" defaultValue={rules.targetRoles.join("\n")} rows={4} className="mt-1 block w-full border border-line bg-ink px-3 py-2 text-sm" />
+          </label>
+          <label className="block font-mono text-xs text-mute">
+            Excluded roles
+            <textarea name="excludedRoles" defaultValue={rules.excludedRoles.join("\n")} rows={4} className="mt-1 block w-full border border-line bg-ink px-3 py-2 text-sm" />
+          </label>
+          <label className="block font-mono text-xs text-mute">
+            Explicit red flags
+            <textarea name="explicitRedFlags" defaultValue={rules.explicitRedFlags.join("\n")} rows={4} className="mt-1 block w-full border border-line bg-ink px-3 py-2 text-sm" />
+          </label>
+          <label className="block font-mono text-xs text-mute">
+            Max job age (days)
+            <input name="maxJobAgeDays" type="number" defaultValue={rules.maxJobAgeDays} className="mt-1 block w-full border border-line bg-ink px-3 py-2 text-sm" />
+          </label>
+          <label className="block font-mono text-xs text-mute">
+            Apply minimum fit
+            <input name="applyMin" type="number" step="0.01" defaultValue={rules.applicationRules.applyRecommendationMinimumScore} className="mt-1 block w-full border border-line bg-ink px-3 py-2 text-sm" />
+          </label>
+          <label className="block font-mono text-xs text-mute">
+            Minimum decision confidence
+            <input name="minConfidence" type="number" step="0.01" defaultValue={rules.applicationRules.minimumDecisionConfidence} className="mt-1 block w-full border border-line bg-ink px-3 py-2 text-sm" />
+          </label>
+        </div>
 
         <fieldset>
           <legend className="mb-2 font-mono text-xs uppercase text-brass">Weights (must sum to any positive total)</legend>

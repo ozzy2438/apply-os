@@ -1,0 +1,40 @@
+import type { CandidateProfile } from "./schemas";
+
+export const DEFAULT_CANDIDATE_PROFILE: CandidateProfile = {
+  id: "default",
+  version: 1,
+  targetRoles: [
+    "Data Scientist",
+    "AI Engineer",
+    "Applied ML Engineer",
+    "Frontend Engineer",
+    "Full-Stack Engineer",
+  ],
+  excludedRoles: ["Graduate", "Intern", "People Manager"],
+  requiredSkills: ["Python", "SQL"],
+  preferredSkills: ["LightGBM", "forecasting", "TypeScript", "React", "governance"],
+  preferredLocations: ["Melbourne", "Australia"],
+  acceptedWorkplaceTypes: ["REMOTE", "HYBRID"],
+  acceptedEmploymentTypes: ["FULL_TIME", "CONTRACT"],
+  seniorityTargets: ["MID", "SENIOR"],
+  minimumSalary: { amount: 120000, currency: "AUD", period: "YEAR" },
+  workAuthorizationCountries: ["AU"],
+  visaConstraints: ["Must already have unrestricted AU work rights"],
+  industriesOfInterest: ["retail", "decisioning", "governed AI"],
+  industriesToAvoid: ["pure gambling", "tobacco"],
+  explicitRedFlags: [
+    "US citizen only",
+    "no visa sponsorship",
+    "PhD required",
+    "onsite New York",
+    "green card",
+  ],
+  applicationRules: {
+    applyRecommendationMinimumScore: 0.7,
+    reviewRecommendationMinimumScore: 0.45,
+    minimumDecisionConfidence: 0.75,
+    requireHumanApprovalForSubmission: true,
+    blockUnsupportedClaims: true,
+  },
+  maxJobAgeDays: 45,
+};
