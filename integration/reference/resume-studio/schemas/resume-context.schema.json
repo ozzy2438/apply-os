@@ -1,0 +1,600 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:apply-os:resume-studio:resume-context:1.0.0",
+  "title": "resume-context",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scope",
+    "header",
+    "job",
+    "entities",
+    "evidence",
+    "claims",
+    "matches"
+  ],
+  "properties": {
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenantId",
+        "candidateId",
+        "jobId",
+        "profileVersion",
+        "profileHash",
+        "decisionPolicyVersion",
+        "decisionPolicyHash",
+        "jobHash"
+      ],
+      "properties": {
+        "tenantId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "candidateId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "jobId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "profileVersion": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "profileHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "decisionPolicyVersion": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "decisionPolicyHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "jobHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "header": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fullName",
+        "location",
+        "email",
+        "phone",
+        "links"
+      ],
+      "properties": {
+        "fullName": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "location": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "email": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "label",
+              "url"
+            ],
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            }
+          }
+        }
+      }
+    },
+    "job": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "organisation",
+        "roleFamilyId",
+        "advertisement",
+        "requirements"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "organisation": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "roleFamilyId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "advertisement": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "text",
+              "importance",
+              "sourceQuote"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "importance": {
+                "enum": [
+                  "MUST",
+                  "SHOULD",
+                  "NICE",
+                  "UNKNOWN"
+                ]
+              },
+              "sourceQuote": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            }
+          }
+        }
+      }
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subject",
+          "title",
+          "organisation",
+          "period",
+          "engagement",
+          "cvUsage",
+          "metadataApproved",
+          "exclusiveGroup",
+          "boundaries"
+        ],
+        "properties": {
+          "subject": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "project",
+                  "experience",
+                  "education",
+                  "certification",
+                  "candidate_fact"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            }
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "organisation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "period": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "engagement": {
+            "enum": [
+              "contract",
+              "freelance",
+              "independent",
+              "portfolio",
+              "employment",
+              "unknown",
+              null
+            ]
+          },
+          "cvUsage": {
+            "enum": [
+              "preferred",
+              "standard",
+              "supporting",
+              "restricted",
+              "excluded"
+            ]
+          },
+          "metadataApproved": {
+            "type": "boolean"
+          },
+          "exclusiveGroup": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "boundaries": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "subject",
+          "sourceText",
+          "sourceDocument",
+          "sourceLocator",
+          "strength"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "subject": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "project",
+                  "experience",
+                  "education",
+                  "certification",
+                  "candidate_fact"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            }
+          },
+          "sourceText": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "sourceDocument": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "sourceLocator": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "strength": {
+            "enum": [
+              "verified",
+              "documented",
+              "self_reported",
+              "uncertain"
+            ]
+          }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "subject",
+          "kind",
+          "text",
+          "evidenceIds",
+          "requiredQualifiers",
+          "measurementContext",
+          "approval"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "subject": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "project",
+                  "experience",
+                  "education",
+                  "certification",
+                  "candidate_fact"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            }
+          },
+          "kind": {
+            "enum": [
+              "summary",
+              "skill",
+              "bullet",
+              "education",
+              "certification"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "requiredQualifiers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "measurementContext": {
+            "enum": [
+              "client_production",
+              "client_delivery",
+              "held_out_evaluation",
+              "controlled_validation",
+              "backtest_or_simulation",
+              "synthetic_data",
+              "public_data_analysis",
+              "modelled_scenario",
+              "unstated",
+              "not_applicable"
+            ]
+          },
+          "approval": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "method",
+              "profileHash",
+              "contentHash"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "approved",
+                  "pending",
+                  "blocked"
+                ]
+              },
+              "method": {
+                "enum": [
+                  "human",
+                  "validated_claim_guard",
+                  "none"
+                ]
+              },
+              "profileHash": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "contentHash": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "approved"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "method": {
+                      "enum": [
+                        "human",
+                        "validated_claim_guard"
+                      ]
+                    },
+                    "contentHash": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requirementId",
+          "claimIds",
+          "support"
+        ],
+        "properties": {
+          "requirementId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "claimIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "uniqueItems": true
+          },
+          "support": {
+            "enum": [
+              "SUPPORTED",
+              "PARTIAL",
+              "UNSUPPORTED",
+              "UNKNOWN"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:apply-os:resume-studio:resume-draft:1.0.0",
+  "title": "resume-draft",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "planId",
+    "summaryClaimIds",
+    "skillClaimIds",
+    "entries",
+    "educationClaimIds",
+    "certificationClaimIds"
+  ],
+  "properties": {
+    "planId": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "summaryClaimIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      },
+      "maxItems": 3,
+      "uniqueItems": true
+    },
+    "skillClaimIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      },
+      "maxItems": 8,
+      "uniqueItems": true
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subjectId",
+          "claimIds"
+        ],
+        "properties": {
+          "subjectId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "claimIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "minItems": 1,
+            "maxItems": 4,
+            "uniqueItems": true
+          }
+        }
+      },
+      "maxItems": 4
+    },
+    "educationClaimIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      },
+      "uniqueItems": true
+    },
+    "certificationClaimIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      },
+      "uniqueItems": true
+    }
+  }
+}

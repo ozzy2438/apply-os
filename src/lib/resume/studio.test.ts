@@ -1,0 +1,110 @@
+import { test } from "vitest";
+import assert from "node:assert/strict";
+import { fixtureContext, fixturePolicy } from "./fixture";
+import { DIMENSIONS, type ResumeContext, type ResumeDraft, type ResumePolicy, type ReviewResult, type ReviewerPort } from "./types";
+import { assertContext, assertPolicy, parseDraft } from "./validation";
+import { claimHash, hash, evaluationCacheKey } from "./identity";
+import { makePlan } from "./planner";
+import { guardDraft, proposeRewrite } from "./guard";
+import { templateDraft, writerState, withDeadline } from "./writer";
+import { composeReview } from "./rank";
+import { RUBRIC_HASH } from "./questions";
+import { makeJevReviewer, reviewExistingText } from "./jev-adapter";
+import { renderResume } from "./render";
+import { buildResume } from "./pipeline";
+import { canMarkReady } from "./readiness";
+import { weightsFor, WEIGHTS } from "./weights";
+function setup(){const ctx=fixtureContext(),p=fixturePolicy(),plan=makePlan(ctx,p),draft=templateDraft(ctx,plan,p);return {ctx,p,plan,draft};}
+function answers(score=3.5,confidence=.9){return Object.fromEntries(DIMENSIONS.map(d=>[d,{score,confidence}]));}
+function reviewFor(ctx:ResumeContext,plan:ReturnType<typeof makePlan>,draft:ResumeDraft,p:ResumePolicy,mode:"mock"|"live"="live"):ReviewResult{
+  return composeReview(answers(),p,{draftHash:guardDraft(ctx,plan,draft,p).draftHash,mode,requestedModel:"test-adapter",resolvedModel:"test-resolved-model"});
+}
+const reviewer:ReviewerPort={async review(ctx,plan,draft,p){return reviewFor(ctx,plan,draft,p);}};
+function receipts(s=setup()){
+  const review=reviewFor(s.ctx,s.plan,s.draft,s.p),h=review.draftHash,artifactHash=hash("TEST PDF BYTES - NO REAL PDF");
+  return {...s,review,layout:{draftHash:h,artifactHash,rendererRevision:"test-renderer",pageCount:1,minFontSizePt:10.5,extractedTextMatches:true,clippedContent:false,measured:true},
+    approval:{actorId:"test-user",tenantId:s.ctx.scope.tenantId,candidateId:s.ctx.scope.candidateId,draftHash:h,artifactHash,approvedAt:"2026-01-01T00:00:00Z",acceptedWarnings:true}};
+}
+function gate(s:ReturnType<typeof receipts>){return canMarkReady({context:s.ctx,plan:s.plan,draft:s.draft,policy:s.p,review:s.review,layout:s.layout,approval:s.approval,now:new Date("2026-09-19T00:00:00Z")});}
+test("fictional context and policy validate",()=>{const {ctx,p}=setup();assert.doesNotThrow(()=>assertContext(ctx));assert.doesNotThrow(()=>assertPolicy(p));});
+test("all six original weighting profiles are finite and sum to one",()=>{for(const weights of Object.values(WEIGHTS))assert.doesNotThrow(()=>assertPolicy({...fixturePolicy(),weights}));});
+test("unknown role family gets explicit provisional equal-weight warning",()=>{const w=weightsFor("future_role");assert.ok(w.warning);assert.doesNotThrow(()=>assertPolicy({...fixturePolicy(),weights:w.weights}));});
+test("policy rejects negative weight",()=>{const p=fixturePolicy();p.weights.technical_depth=-1;assert.throws(()=>assertPolicy(p));});
+test("policy rejects nonfinite weight",()=>{const p=fixturePolicy();p.weights.technical_depth=NaN;assert.throws(()=>assertPolicy(p));});
+test("policy rejects empty scoring applicability",()=>{const p=fixturePolicy();p.notApplicableDimensions=[...DIMENSIONS];assert.throws(()=>assertPolicy(p));});
+test("policy forbids endless revision loops",()=>{const p=fixturePolicy();(p as unknown as {maxRevisions:number}).maxRevisions=3;assert.throws(()=>assertPolicy(p));});
+test("policy prevents unreadable microfont",()=>{const p=fixturePolicy();p.minFontSizePt=8;assert.throws(()=>assertPolicy(p));});
+test("draft parser rejects invented prose field",()=>{const {draft}=setup();assert.throws(()=>parseDraft({...draft,text:"Invented achievement"}));});
+test("draft parser rejects malformed entries",()=>{const {draft}=setup();assert.throws(()=>parseDraft({...draft,entries:[null]}));});
+test("duplicate evidence IDs fail closed",()=>{const c=fixtureContext();c.evidence.push(structuredClone(c.evidence[0]!));assert.throws(()=>assertContext(c));});
+test("duplicate claim IDs fail closed",()=>{const c=fixtureContext();c.claims.push(structuredClone(c.claims[0]!));assert.throws(()=>assertContext(c));});
+test("broken evidence reference fails closed",()=>{const c=fixtureContext();c.claims[0]!.evidenceIds=["does-not-exist"];assert.throws(()=>assertContext(c));});
+test("wrong-source evidence fails closed",()=>{const c=fixtureContext();c.claims[0]!.evidenceIds=["evidence-c-stakeholder"];assert.throws(()=>assertContext(c));});
+test("source changes invalidate claim approvals",()=>{const c=fixtureContext();c.scope.profileHash=hash("new-profile");assert.throws(()=>assertContext(c));});
+test("claim wording changes invalidate approvals",()=>{const c=fixtureContext();c.claims[0]!.text="Led a department";assert.throws(()=>assertContext(c));});
+test("unproven source cannot be automatically approved",()=>{const c=fixtureContext();c.evidence[0]!.strength="uncertain";assert.throws(()=>assertContext(c));});
+test("requirements must quote the job",()=>{const c=fixtureContext();c.job.requirements[0]!.sourceQuote="Does not occur";assert.throws(()=>assertContext(c));});
+test("planner is deterministic",()=>{const c=fixtureContext(),p=fixturePolicy();assert.deepEqual(makePlan(c,p),makePlan(c,p));});
+test("planner retains the full input bank without mutation",()=>{const c=fixtureContext(),copy=structuredClone(c);makePlan(c,fixturePolicy());assert.deepEqual(c,copy);});
+test("planner does not select excluded evidence",()=>{const {plan}=setup();assert.ok(!plan.entryIds.includes("demo-excluded"));assert.ok(!plan.allowedClaimIds.includes("c-excluded"));});
+test("pending claims are not promoted to approved",()=>{const c=fixtureContext();for(const x of c.claims)x.approval.status="pending";assert.equal(makePlan(c,fixturePolicy()).entryIds.length,0);});
+test("exclusive project groups prevent double counting the same work",()=>{const c=fixtureContext();c.entities[0]!.exclusiveGroup="same-body";c.entities[1]!.exclusiveGroup="same-body";assert.equal(makePlan(c,fixturePolicy()).entryIds.length,1);});
+test("template draft passes claim guard",()=>{const {ctx,p,plan,draft}=setup();assert.equal(guardDraft(ctx,plan,draft,p).passed,true);});
+test("invented claim ID is blocked",()=>{const {ctx,p,plan,draft}=setup();draft.entries[0]!.claimIds.push("made-up");assert.equal(guardDraft(ctx,plan,draft,p).passed,false);});
+test("wrong historical entry subject is blocked",()=>{const {ctx,p,plan,draft}=setup();draft.entries[0]!.claimIds=["c-stakeholder"];assert.equal(guardDraft(ctx,plan,draft,p).passed,false);});
+test("duplicate text atoms are blocked",()=>{const {ctx,p,plan,draft}=setup();draft.entries[0]!.claimIds.push(draft.entries[0]!.claimIds[0]!);assert.equal(guardDraft(ctx,plan,draft,p).passed,false);});
+test("no more than four bullets per entry",()=>{const {ctx,p,plan,draft}=setup();draft.entries[0]!.claimIds=Array(5).fill("c-sql");assert.equal(guardDraft(ctx,plan,draft,p).passed,false);});
+test("stale plan fails after policy update",()=>{const {ctx,p,plan,draft}=setup();p.version="1.0.1";assert.equal(guardDraft(ctx,plan,draft,p).passed,false);});
+test("removed qualification remains blocked even with a new text receipt",()=>{const c=fixtureContext(),p=fixturePolicy();const card=c.claims.find(c=>c.id==="c-python")!;card.text=card.text.replace("in a controlled benchmark","");card.approval.contentHash=claimHash(card);const plan=makePlan(c,p),d=templateDraft(c,plan,p);assert.ok(guardDraft(c,plan,d,p).errors.some(e=>e.includes("MISSING_QUALIFIER")));});
+test("controlled numeric result requires a qualifier",()=>{const c=fixtureContext(),p=fixturePolicy();const card=c.claims.find(c=>c.id==="c-python")!;card.requiredQualifiers=[];card.approval.contentHash=claimHash(card);const plan=makePlan(c,p),d=templateDraft(c,plan,p);assert.ok(guardDraft(c,plan,d,p).errors.some(e=>e.includes("QUALIFIER_REQUIRED")));});
+test("rewrites always start pending, never approved",()=>{const c=fixtureContext();const r=proposeRewrite(c,{originalClaimId:"c-sql",text:"Built validated SQL reporting.",evidenceIds:["evidence-c-sql"]});assert.equal(r.approval.status,"pending");assert.equal(r.approval.contentHash,null);});
+test("rewrite cannot cite unrelated evidence",()=>{const c=fixtureContext();assert.throws(()=>proposeRewrite(c,{originalClaimId:"c-sql",text:"A changed claim.",evidenceIds:["evidence-c-stakeholder"]}));});
+test("writer does not receive personal contacts or entire portfolio",()=>{const {ctx,p,plan}=setup();const state=JSON.stringify(writerState(ctx,plan,p));assert.ok(!state.includes(ctx.header.email!));assert.ok(!state.includes(ctx.header.fullName));assert.ok(!state.includes("demo-excluded"));});
+test("input budget failure is explicit, not truncation",()=>{const {ctx,p,plan}=setup();p.maxModelInputChars=10;assert.throws(()=>writerState(ctx,plan,p));});
+test("scores are normalised by rubric level count",()=>{const r=composeReview(answers(3,.9),fixturePolicy(),{draftHash:"x",mode:"mock",requestedModel:"mock",resolvedModel:null});assert.ok(Math.abs(r.readinessScore!-.75)<1e-12);});
+test("low confidence is not multiplied into readiness score",()=>{const meta={draftHash:"x",mode:"mock" as const,requestedModel:"mock",resolvedModel:null};const a=composeReview(answers(3,.9),fixturePolicy(),meta),b=composeReview(answers(3,.3),fixturePolicy(),meta);assert.equal(a.readinessScore,b.readinessScore);assert.equal(b.assessment,"NEEDS_HUMAN_REVIEW");});
+test("missing score is not interpreted as zero",()=>{const a=answers();delete a.technical_depth;assert.throws(()=>composeReview(a,fixturePolicy(),{draftHash:"x",mode:"mock",requestedModel:"mock",resolvedModel:null}));});
+test("scores outside scale are rejected",()=>{assert.throws(()=>composeReview(answers(5),fixturePolicy(),{draftHash:"x",mode:"mock",requestedModel:"mock",resolvedModel:null}));});
+test("string scores are rejected instead of coerced",()=>{const a=answers() as Record<string,unknown>;a.technical_depth={score:"4",confidence:.9};assert.throws(()=>composeReview(a,fixturePolicy(),{draftHash:"x",mode:"mock",requestedModel:"mock",resolvedModel:null}));});
+test("NaN confidence is rejected",()=>{assert.throws(()=>composeReview(answers(3,NaN),fixturePolicy(),{draftHash:"x",mode:"mock",requestedModel:"mock",resolvedModel:null}));});
+test("host-selected N/A dimensions renormalise remaining weights",()=>{const p=fixturePolicy();p.notApplicableDimensions=["domain_alignment"];const r=composeReview(answers(4),p,{draftHash:"x",mode:"mock",requestedModel:"mock",resolvedModel:null});assert.ok(Math.abs(r.readinessScore!-1)<1e-12);assert.equal(r.dimensions.length,8);});
+test("renderer preserves approved qualifications and independent labels",()=>{const {ctx,p,plan,draft}=setup();const r=renderResume(ctx,plan,draft,p);assert.ok(r.text.includes("in a controlled benchmark"));assert.ok(r.text.includes("Independent project"));assert.ok(r.text.includes("Reporting analyst"));});
+test("renderer escapes HTML and rejects unsafe URL protocols",()=>{const c=fixtureContext(),p=fixturePolicy();c.entities[0]!.title='<script>alert("x")</script>';c.header.links=[{label:"Bad",url:"javascript:alert(1)"}];const plan=makePlan(c,p),d=templateDraft(c,plan,p),r=renderResume(c,plan,d,p);assert.ok(!r.html.includes("<script>"));assert.ok(r.html.includes("&lt;script&gt;"));assert.ok(!r.html.includes("javascript:"));});
+test("renderer never shrinks text to meet a word limit",()=>{const c=fixtureContext(),p=fixturePolicy();p.maxWords=10;const plan=makePlan(c,p),d=templateDraft(c,plan,p);assert.throws(()=>renderResume(c,plan,d,p));});
+test("Jev adapter sends exactly active bounded questions and masks contacts",async()=>{const {ctx,p,plan,draft}=setup();let captured:unknown;const r=makeJevReviewer(async call=>{captured=call.request;return {answers:answers(),model:"test-revision"};},"test-alias");const review=await r.review(ctx,plan,draft,p,new AbortController().signal);assert.equal(review.resolvedModel,"test-revision");const req=captured as {questions:Record<string,unknown>};assert.equal(Object.keys(req.questions).length,9);assert.ok(!JSON.stringify(captured).includes(ctx.header.email!));});
+test("malformed provider response fails closed",async()=>{const {ctx,p,plan,draft}=setup();const r=makeJevReviewer(async()=>({oops:true}),"test");await assert.rejects(()=>r.review(ctx,plan,draft,p,new AbortController().signal));});
+test("existing CV review never grants claim verification or Ready",async()=>{const r=await reviewExistingText(async()=>({answers:answers()}),"test",{jobText:"SQL required",resumeText:"SQL reporting"},fixturePolicy(),new AbortController().signal);assert.equal(r.claimVerification,"NOT_RUN");assert.equal(r.canMarkReady,false);});
+test("pipeline requires a user build action",async()=>{await assert.rejects(()=>buildResume({context:fixtureContext(),policy:fixturePolicy(),userRequested:false}));});
+test("pipeline with no approved claims requires claim review",async()=>{const c=fixtureContext();for(const x of c.claims)x.approval.status="pending";const r=await buildResume({context:c,policy:fixturePolicy(),userRequested:true});assert.equal(r.status,"NEEDS_CLAIM_REVIEW");assert.equal(r.draft,null);});
+test("template fallback is usable but absent QA never produces fake scores",async()=>{const r=await buildResume({context:fixtureContext(),policy:fixturePolicy(),userRequested:true});assert.ok(r.draft);assert.equal(r.review?.status,"unavailable");assert.equal(r.review?.readinessScore,null);});
+test("provider timeout retains a safe draft and reports unavailable QA",async()=>{const p=fixturePolicy();p.timeoutMs=10;const r=await buildResume({context:fixtureContext(),policy:p,userRequested:true,reviewer:{review:()=>new Promise(()=>{})}});assert.ok(r.draft);assert.equal(r.review?.status,"unavailable");});
+test("deadline aborts hung work",async()=>{await assert.rejects(()=>withDeadline(5,()=>new Promise(()=>{})),/PROVIDER_TIMEOUT/);});
+test("cancelled request does not start provider work",async()=>{const c=new AbortController();c.abort();let called=false;await assert.rejects(()=>withDeadline(100,async()=>{called=true;return 1;},c.signal));assert.equal(called,false);});
+test("unsafe model output is blocked before reviewer call",async()=>{let reviews=0;const r=await buildResume({context:fixtureContext(),policy:fixturePolicy(),userRequested:true,writer:{revision:"test",mode:"live",async write(){return {planId:"invented",text:"fake"};}},reviewer:{async review(){reviews++;throw new Error("unreachable");}}});assert.equal(r.status,"BLOCKED");assert.equal(reviews,0);});
+test("pipeline never emits READY, even with perfect presentation scores",async()=>{const r=await buildResume({context:fixtureContext(),policy:fixturePolicy(),userRequested:true,reviewer});assert.equal(r.status,"AWAITING_HUMAN_REVIEW");});
+test("revision loop is capped at one and unsafe revision cannot replace original",async()=>{
+  const c=fixtureContext(),p=fixturePolicy(),plan=makePlan(c,p),d=templateDraft(c,plan,p);let writes=0,reviews=0;
+  const r=await buildResume({context:c,policy:p,userRequested:true,writer:{mode:"live",revision:"test",async write(){writes++;if(writes===1)return d;return {...d,entries:[{subjectId:d.entries[0]!.subjectId,claimIds:["fabricated"]}]};}},reviewer:{async review(c,pl,dr,p){reviews++;return composeReview(answers(1),p,{draftHash:guardDraft(c,pl,dr,p).draftHash,mode:"live",requestedModel:"test",resolvedModel:"test"});}}});
+  assert.equal(writes,2);assert.equal(reviews,1);assert.equal(r.revisionAttempts,1);assert.deepEqual(r.draft,d);
+});
+test("cache key is tenant isolated",()=>{const {ctx,p,draft}=setup();const a=evaluationCacheKey(ctx,draft,p,RUBRIC_HASH,"model-v1");ctx.scope.tenantId="other";assert.notEqual(a,evaluationCacheKey(ctx,draft,p,RUBRIC_HASH,"model-v1"));});
+test("cache invalidates with policy or source snapshot",()=>{const {ctx,p,draft}=setup();const a=evaluationCacheKey(ctx,draft,p,RUBRIC_HASH,"model-v1");p.version="1.0.1";assert.notEqual(a,evaluationCacheKey(ctx,draft,p,RUBRIC_HASH,"model-v1"));});
+test("floating model aliases do not get durable cache keys",()=>{const {ctx,p,draft}=setup();assert.equal(evaluationCacheKey(ctx,draft,p,RUBRIC_HASH,"jev-latest"),null);});
+test("final gate accepts a fully matching synthetic set of trusted receipts",()=>{assert.equal(gate(receipts()).ready,true);});
+test("mock scores cannot make a resume Ready",()=>{const s=receipts();s.review.mode="mock";assert.equal(gate(s).ready,false);});
+test("human approval is required even after good QA",()=>{const s=receipts();assert.equal(canMarkReady({context:s.ctx,plan:s.plan,draft:s.draft,policy:s.p,review:s.review,layout:s.layout,approval:null}).ready,false);});
+test("unmeasured HTML is not a one-page export receipt",()=>{const s=receipts();s.layout.measured=false;assert.equal(gate(s).ready,false);});
+test("two-page PDF fails one-page gate",()=>{const s=receipts();s.layout.pageCount=2;assert.equal(gate(s).ready,false);});
+test("clipped output fails final gate",()=>{const s=receipts();s.layout.clippedContent=true;assert.equal(gate(s).ready,false);});
+test("text extraction mismatch fails final gate",()=>{const s=receipts();s.layout.extractedTextMatches=false;assert.equal(gate(s).ready,false);});
+test("artifact hash change invalidates approval",()=>{const s=receipts();s.layout.artifactHash=hash("other PDF");assert.equal(gate(s).ready,false);});
+test("review from another draft cannot approve this one",()=>{const s=receipts();s.review.draftHash=hash("other draft");assert.equal(gate(s).ready,false);});
+test("cross-tenant approval fails",()=>{const s=receipts();s.approval.tenantId="other-tenant";assert.equal(gate(s).ready,false);});
+test("unconfirmed metadata blocks final export",()=>{const s=setup();s.ctx.entities[0]!.metadataApproved=false;s.plan=makePlan(s.ctx,s.p);s.draft=templateDraft(s.ctx,s.plan,s.p);assert.equal(gate(receipts(s)).ready,false);});
+test("unknown engagement is not silently converted into independent or paid work",()=>{const s=setup();s.ctx.entities[0]!.engagement="unknown";s.plan=makePlan(s.ctx,s.p);s.draft=templateDraft(s.ctx,s.plan,s.p);const r=renderResume(s.ctx,s.plan,s.draft,s.p);assert.ok(r.text.includes("Engagement basis unconfirmed"));assert.equal(gate(receipts(s)).ready,false);});
+test("future dated approval is rejected",()=>{const s=receipts();s.approval.approvedAt="2099-01-01T00:00:00Z";assert.equal(gate(s).ready,false);});
+
+test("NaN layout measurements cannot grant Ready",()=>{const s=receipts();s.layout.minFontSizePt=NaN;assert.equal(gate(s).ready,false);});
+test("fabricated assessment label cannot conceal low underlying scores",()=>{const s=receipts();for(const d of s.review.dimensions)d.raw=0;s.review.assessment="READY_FOR_HUMAN_REVIEW";assert.equal(gate(s).ready,false);});
+test("independent evidence cannot be labelled client production",()=>{const c=fixtureContext(),p=fixturePolicy();const card=c.claims.find(x=>x.id==="c-sql")!;card.measurementContext="client_production";card.approval.contentHash=claimHash(card);const plan=makePlan(c,p),d=templateDraft(c,plan,p);assert.ok(guardDraft(c,plan,d,p).errors.some(x=>x.startsWith("ENGAGEMENT_CONTEXT_CONTRADICTION")));});
+test("template provenance is explicit in pipeline result",async()=>{const r=await buildResume({context:fixtureContext(),policy:fixturePolicy(),userRequested:true});assert.equal(r.generation.mode,"template");assert.equal(r.generation.writerCallAttempts,0);});

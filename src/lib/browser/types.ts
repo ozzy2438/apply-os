@@ -114,7 +114,7 @@ export type BrowserSession = {
   demo: boolean;
 };
 
-export type ApprovalKind = "MEDIUM" | "HIGH" | "IRREVERSIBLE" | "SUBMIT" | "MESSAGE" | "UPLOAD";
+export type ApprovalKind = "MEDIUM" | "HIGH" | "IRREVERSIBLE" | "SUBMIT" | "MESSAGE" | "UPLOAD" | "RESUME_READY";
 
 export type ApprovalEvent = {
   id: string;

@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:apply-os:resume-studio:readiness-receipts:1.0.0",
+  "title": "readiness-receipts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "layout",
+    "approval"
+  ],
+  "properties": {
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "draftHash",
+        "artifactHash",
+        "rendererRevision",
+        "pageCount",
+        "minFontSizePt",
+        "extractedTextMatches",
+        "clippedContent",
+        "measured"
+      ],
+      "properties": {
+        "draftHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "artifactHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "rendererRevision": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "pageCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "minFontSizePt": {
+          "type": "number",
+          "minimum": 1
+        },
+        "extractedTextMatches": {
+          "type": "boolean"
+        },
+        "clippedContent": {
+          "type": "boolean"
+        },
+        "measured": {
+          "type": "boolean"
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actorId",
+        "tenantId",
+        "candidateId",
+        "draftHash",
+        "artifactHash",
+        "approvedAt",
+        "acceptedWarnings"
+      ],
+      "properties": {
+        "actorId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "candidateId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "draftHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "artifactHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "approvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "acceptedWarnings": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

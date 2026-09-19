@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typesafe:login": "node scripts/verify-typesafe-key.mjs"
+    "typesafe:login": "node scripts/verify-typesafe-key.mjs",
+    "resume:live-smoke": "LIVE_RESUME_SMOKE=1 vitest run src/lib/resume/live-smoke.test.ts"
   },
   "engines": {
     "node": ">=20"

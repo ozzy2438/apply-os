@@ -74,6 +74,28 @@ export const DDL_V2 = [
     evaluation_json TEXT NOT NULL,
     created_at TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS resume_runs (
+    id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    tenant_id TEXT NOT NULL,
+    candidate_id TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL,
+    intent TEXT NOT NULL,
+    snapshot_json TEXT NOT NULL,
+    draft_hash TEXT,
+    artifact_hash TEXT,
+    profile_hash TEXT NOT NULL,
+    decision_policy_hash TEXT NOT NULL,
+    resume_policy_hash TEXT NOT NULL,
+    writer_mode TEXT,
+    writer_revision TEXT,
+    reviewer_mode TEXT,
+    reviewer_revision TEXT,
+    usage_json TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
 ];
 
 export const ALTERS = [
