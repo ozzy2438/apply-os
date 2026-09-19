@@ -96,6 +96,37 @@ export const DDL_V2 = [
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS discovery_runs (
+    id TEXT PRIMARY KEY,
+    config_version TEXT NOT NULL,
+    query_json TEXT NOT NULL,
+    provider_ids_json TEXT NOT NULL,
+    live INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    summary_json TEXT NOT NULL,
+    candidate_profile_version TEXT,
+    decision_policy_version TEXT,
+    created_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS discovery_items (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    cluster_id TEXT NOT NULL,
+    opportunity_id TEXT,
+    stage TEXT NOT NULL,
+    triage_bucket TEXT,
+    provider_id TEXT NOT NULL,
+    live INTEGER NOT NULL,
+    title TEXT,
+    company TEXT,
+    location TEXT,
+    canonical_url TEXT,
+    source_urls_json TEXT NOT NULL,
+    content_hash TEXT,
+    normalized_json TEXT NOT NULL,
+    provenance_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`,
 ];
 
 export const ALTERS = [

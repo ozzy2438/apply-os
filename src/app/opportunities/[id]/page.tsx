@@ -17,6 +17,8 @@ import { explanationFromEvaluation } from "@/lib/policy/compose";
 import { STATUSES } from "@/lib/jev/types";
 import { resumeStudioEnabled } from "@/lib/resume/flags";
 import { latestResumeRun, latestResumeRunByIntent } from "@/lib/resume/persist";
+import { deskDiscoveryFacts, discoveryFactsForJob } from "@/lib/discovery";
+import { DiscoveryFactsStrip } from "@/components/Decision";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
@@ -40,6 +42,8 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
   const resumeRun = resumeEnabled ? await latestResumeRun(id) : null;
   const buildRun = resumeEnabled ? await latestResumeRunByIntent(id, "build") : null;
   const resumeReady = buildRun?.status === "READY";
+  const discovery = await discoveryFactsForJob(id);
+  const facts = deskDiscoveryFacts(discovery, v2 ?? null);
 
   return (
     <main className="space-y-6">
@@ -53,6 +57,8 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
           {opportunity.compensation ? ` · ${opportunity.compensation}` : ""}
         </p>
       </div>
+
+      {facts ? <DiscoveryFactsStrip {...facts} /> : null}
 
       {composed ? (
         <section className="grid gap-4 md:grid-cols-2">

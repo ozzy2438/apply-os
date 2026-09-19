@@ -172,3 +172,12 @@ export async function stopDiscovery(sessionId: string): Promise<void> {
   await saveBrowserSession(session);
   revalidatePath("/discover");
 }
+
+export async function runProviderDiscoveryAction(): Promise<void> {
+  await bootApp();
+  const { runProviderDiscovery } = await import("@/lib/discovery/service");
+  await runProviderDiscovery();
+  revalidatePath("/discover");
+  revalidatePath("/inbox");
+  revalidatePath("/");
+}
