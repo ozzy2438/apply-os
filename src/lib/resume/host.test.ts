@@ -29,9 +29,31 @@ import {
   recordResumeIntent,
   reviewExistingResumeForJob,
 } from "./service";
-import { assertContext } from "./validation";
+import { assertContext, parseDraft } from "./validation";
+import { pickResumeDraftJson } from "./host";
 
 describe("resume studio host integration", () => {
+  it("strips extra model fields before the strict draft parser", () => {
+    const picked = pickResumeDraftJson({
+      planId: "plan-1",
+      summaryClaimIds: ["c-summary"],
+      skillClaimIds: ["c-skill-sql"],
+      entries: [{ subjectId: "demo-pipeline", claimIds: ["c-sql"] }],
+      educationClaimIds: ["c-education"],
+      certificationClaimIds: [],
+      commentary: "ignore me",
+    });
+    expect(picked).toEqual({
+      planId: "plan-1",
+      summaryClaimIds: ["c-summary"],
+      skillClaimIds: ["c-skill-sql"],
+      entries: [{ subjectId: "demo-pipeline", claimIds: ["c-sql"] }],
+      educationClaimIds: ["c-education"],
+      certificationClaimIds: [],
+    });
+    expect(() => parseDraft(picked)).not.toThrow();
+  });
+
   afterEach(() => {
     resetDriverForTests(undefined);
   });

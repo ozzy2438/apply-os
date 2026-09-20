@@ -40,6 +40,7 @@ export function createGenerationProvider(): GenerationProvider {
         const completion = await client.chat.completions.create({
           model,
           temperature: 0.3,
+          response_format: { type: "json_object" },
           messages: [
             {
               role: "system",

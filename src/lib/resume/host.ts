@@ -11,6 +11,24 @@ function openaiKey(): string | undefined {
   return process.env.OPENAI_API_KEY?.trim() || process.env.NETLIFY_OPENAI_API_KEY?.trim();
 }
 
+const DRAFT_FIELDS = [
+  "planId",
+  "summaryClaimIds",
+  "skillClaimIds",
+  "entries",
+  "educationClaimIds",
+  "certificationClaimIds",
+] as const;
+
+/** Host sanitises untrusted model JSON before the strict draft parser. */
+export function pickResumeDraftJson(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const source = raw as Record<string, unknown>;
+  const picked: Record<string, unknown> = {};
+  for (const key of DRAFT_FIELDS) picked[key] = source[key];
+  return picked;
+}
+
 export function createResumeWriter(ctx: ResumeContext, plan: ResumePlan, policy: ResumePolicy): WriterPort {
   const key = openaiKey();
   if (!key) return templateWriter(ctx, plan, policy);
@@ -30,6 +48,7 @@ export function createResumeWriter(ctx: ResumeContext, plan: ResumePlan, policy:
         {
           model,
           temperature: 0,
+          response_format: { type: "json_object" },
           messages: [
             { role: "system", content: WRITER_INSTRUCTIONS },
             {
@@ -54,7 +73,7 @@ export function createResumeWriter(ctx: ResumeContext, plan: ResumePlan, policy:
       const raw = completion.choices[0]?.message?.content ?? "";
       const match = raw.match(/\{[\s\S]*\}/);
       if (!match) throw new Error("WRITER_FAILED");
-      return parseDraft(JSON.parse(match[0]));
+      return parseDraft(pickResumeDraftJson(JSON.parse(match[0])));
     },
   };
 }
