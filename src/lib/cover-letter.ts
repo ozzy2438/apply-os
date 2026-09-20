@@ -77,15 +77,16 @@ export async function draftCoverLetter(
   const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
   try {
-    const completion = await client.chat.completions.create({
-      model,
-      temperature: 0.3,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You draft conservative cover letters. Never invent production ownership, years, tools, or employers. Return JSON only.",
-        },
+        const completion = await client.chat.completions.create({
+          model,
+          temperature: 0.3,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content:
+                "You draft conservative cover letters. Never invent production ownership, years, tools, or employers. Return JSON only.",
+            },
         {
           role: "user",
           content: JSON.stringify({

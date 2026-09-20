@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "typesafe:login": "node scripts/verify-typesafe-key.mjs",
     "resume:live-smoke": "LIVE_RESUME_SMOKE=1 vitest run src/lib/resume/live-smoke.test.ts",
-    "discovery:live-smoke": "LIVE_DISCOVERY_SMOKE=1 vitest run src/lib/discovery/live-smoke.test.ts"
+    "discovery:live-smoke": "LIVE_DISCOVERY_SMOKE=1 vitest run src/lib/discovery/live-smoke.test.ts",
+    "openai:live-smoke": "LIVE_OPENAI_SMOKE=1 vitest run src/lib/openai-live-smoke.test.ts"
   },
   "engines": {
     "node": ">=20"

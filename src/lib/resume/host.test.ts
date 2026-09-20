@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import os from "node:os";
 import path from "node:path";
 import { getDriver, resetDriverForTests, sqliteDriver } from "@/lib/db/driver";
@@ -12,6 +12,7 @@ import { normalizeJobPosting } from "@/lib/ingest/normalize";
 import { isApplicationExcludedProject } from "@/lib/canonical/claims";
 import { loadCanonicalProfile } from "@/lib/canonical/load";
 import { buildResumeContext } from "./context";
+import { fixtureContext, fixturePolicy } from "./fixture";
 import { makePlan } from "./planner";
 import { templateDraft, writerState } from "./writer";
 import { guardDraft } from "./guard";
@@ -29,11 +30,78 @@ import {
   recordResumeIntent,
   reviewExistingResumeForJob,
 } from "./service";
-import { assertContext } from "./validation";
+import { assertContext, parseDraft } from "./validation";
+import { pickResumeDraftJson, repairResumeDraft } from "./host";
 
 describe("resume studio host integration", () => {
+  const previousOpenAi = process.env.OPENAI_API_KEY;
+  const previousNetlifyOpenAi = process.env.NETLIFY_OPENAI_API_KEY;
+
+  beforeEach(() => {
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.NETLIFY_OPENAI_API_KEY;
+  });
+
   afterEach(() => {
     resetDriverForTests(undefined);
+    if (previousOpenAi === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousOpenAi;
+    if (previousNetlifyOpenAi === undefined) delete process.env.NETLIFY_OPENAI_API_KEY;
+    else process.env.NETLIFY_OPENAI_API_KEY = previousNetlifyOpenAi;
+  });
+
+  it("strips extra model fields before the strict draft parser", () => {
+    const picked = pickResumeDraftJson({
+      planId: "wrong",
+      summaryClaimIds: ["c-summary"],
+      skillClaimIds: ["c-skill-sql"],
+      entries: [{ subjectId: "demo-pipeline", claimIds: ["c-sql"], title: "extra" }],
+      educationClaimIds: ["c-education"],
+      certificationClaimIds: [],
+      commentary: "ignore me",
+    }, "plan-1");
+    expect(picked).toEqual({
+      planId: "plan-1",
+      summaryClaimIds: ["c-summary"],
+      skillClaimIds: ["c-skill-sql"],
+      entries: [{ subjectId: "demo-pipeline", claimIds: ["c-sql"] }],
+      educationClaimIds: ["c-education"],
+      certificationClaimIds: [],
+    });
+    expect(() => parseDraft(picked)).not.toThrow();
+    const messy = pickResumeDraftJson({
+      planId: "wrong",
+      summaryClaimIds: "c-summary",
+      skillClaimIds: [null, "c-skill-sql", 3],
+      entries: [{ subjectId: "demo-pipeline", claimIds: "c-sql" }, { subjectId: "x" }],
+      educationClaimIds: ["c-education"],
+    }, "plan-3") as { skillClaimIds: string[]; entries: Array<{ claimIds: string[] }> };
+    expect(messy.skillClaimIds).toEqual(["c-skill-sql"]);
+    expect(messy.entries).toEqual([]);
+  });
+
+  it("fills empty live entries from the template selector without inventing claims", () => {
+    const ctx = fixtureContext();
+    const policy = fixturePolicy();
+    const plan = makePlan(ctx, policy);
+    const template = templateDraft(ctx, plan, policy);
+    const repaired = repairResumeDraft(
+      {
+        planId: plan.id,
+        summaryClaimIds: ["not-a-claim"],
+        skillClaimIds: [],
+        entries: [],
+        educationClaimIds: [],
+        certificationClaimIds: [],
+      },
+      ctx,
+      plan,
+      policy,
+    );
+    expect(repaired.entries).toEqual(template.entries);
+    expect(repaired.summaryClaimIds).toEqual(template.summaryClaimIds);
+    expect(repaired.entries.length).toBeGreaterThan(0);
+    expect(guardDraft(ctx, plan, repaired, policy).passed).toBe(true);
   });
 
   it("projects the canonical profile without dumping the library into writer state", () => {
