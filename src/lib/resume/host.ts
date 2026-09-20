@@ -35,18 +35,27 @@ export function pickResumeDraftJson(raw: unknown, planId?: string): unknown {
   for (const key of DRAFT_FIELDS) picked[key] = source[key];
   if (planId) picked.planId = planId;
   for (const key of CLAIM_ID_FIELDS) {
-    if (!Array.isArray(picked[key])) picked[key] = [];
+    picked[key] = asIdList(picked[key]);
   }
-  if (Array.isArray(source.entries)) {
-    picked.entries = source.entries.map((entry) => {
-      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
-      const row = entry as Record<string, unknown>;
-      return { subjectId: row.subjectId, claimIds: row.claimIds };
-    });
-  } else {
-    picked.entries = [];
-  }
+  picked.entries = asEntries(source.entries);
   return picked;
+}
+
+function asIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+}
+
+function asEntries(value: unknown): Array<{ subjectId: string; claimIds: string[] }> {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+    const row = entry as Record<string, unknown>;
+    const subjectId = typeof row.subjectId === "string" ? row.subjectId.trim() : "";
+    const claimIds = asIdList(row.claimIds);
+    if (!subjectId || !claimIds.length) return [];
+    return [{ subjectId, claimIds }];
+  });
 }
 
 /** Clamp model selections to the plan; fill empty work evidence from the template selector. */
@@ -95,42 +104,57 @@ export function createResumeWriter(ctx: ResumeContext, plan: ResumePlan, policy:
     revision: `${WRITER_REVISION}:${model}`,
     mode: "live",
     async write(input) {
-      const { default: OpenAI } = await import("openai");
-      const client = new OpenAI({
-        apiKey: key,
-        baseURL: process.env.OPENAI_BASE_URL || undefined,
-      });
-      const completion = await client.chat.completions.create(
-        {
-          model,
-          temperature: 0,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: WRITER_INSTRUCTIONS },
-            {
-              role: "user",
-              content: JSON.stringify({
-                requiredPlanId: plan.id,
-                contract: {
-                  planId: plan.id,
-                  summaryClaimIds: ["approved claim id"],
-                  skillClaimIds: ["approved claim id"],
-                  entries: [{ subjectId: "plan entry subject id", claimIds: ["approved claim id"] }],
-                  educationClaimIds: ["approved claim id"],
-                  certificationClaimIds: ["approved claim id"],
-                },
-                state: input.state,
-                phase: input.phase,
-              }),
-            },
-          ],
-        },
-        { signal: input.signal },
-      );
-      const raw = completion.choices[0]?.message?.content ?? "";
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error("WRITER_FAILED");
-      return repairResumeDraft(parseDraft(pickResumeDraftJson(JSON.parse(match[0]), plan.id)), ctx, plan, policy);
+      const fallback = () => templateDraft(ctx, plan, policy);
+      const statePlanId =
+        input.state && typeof input.state === "object" && !Array.isArray(input.state) &&
+        typeof (input.state as { planId?: unknown }).planId === "string"
+          ? (input.state as { planId: string }).planId
+          : plan.id;
+      try {
+        const { default: OpenAI } = await import("openai");
+        const client = new OpenAI({
+          apiKey: key,
+          baseURL: process.env.OPENAI_BASE_URL || undefined,
+        });
+        const completion = await client.chat.completions.create(
+          {
+            model,
+            temperature: 0,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: WRITER_INSTRUCTIONS },
+              {
+                role: "user",
+                content: JSON.stringify({
+                  requiredPlanId: statePlanId,
+                  contract: {
+                    planId: statePlanId,
+                    summaryClaimIds: ["approved claim id"],
+                    skillClaimIds: ["approved claim id"],
+                    entries: [{ subjectId: "plan entry subject id", claimIds: ["approved claim id"] }],
+                    educationClaimIds: ["approved claim id"],
+                    certificationClaimIds: ["approved claim id"],
+                  },
+                  state: input.state,
+                  phase: input.phase,
+                }),
+              },
+            ],
+          },
+          { signal: input.signal },
+        );
+        const raw = completion.choices[0]?.message?.content ?? "";
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (!match) return fallback();
+        return repairResumeDraft(
+          parseDraft(pickResumeDraftJson(JSON.parse(match[0]), statePlanId)),
+          ctx,
+          plan,
+          policy,
+        );
+      } catch {
+        return fallback();
+      }
     },
   };
 }

@@ -69,14 +69,15 @@ describe("resume studio host integration", () => {
       certificationClaimIds: [],
     });
     expect(() => parseDraft(picked)).not.toThrow();
-    const missing = pickResumeDraftJson({ planId: "ignored" }, "plan-2") as {
-      planId: string;
-      summaryClaimIds: string[];
-      entries: unknown[];
-    };
-    expect(missing.planId).toBe("plan-2");
-    expect(missing.summaryClaimIds).toEqual([]);
-    expect(missing.entries).toEqual([]);
+    const messy = pickResumeDraftJson({
+      planId: "wrong",
+      summaryClaimIds: "c-summary",
+      skillClaimIds: [null, "c-skill-sql", 3],
+      entries: [{ subjectId: "demo-pipeline", claimIds: "c-sql" }, { subjectId: "x" }],
+      educationClaimIds: ["c-education"],
+    }, "plan-3") as { skillClaimIds: string[]; entries: Array<{ claimIds: string[] }> };
+    expect(messy.skillClaimIds).toEqual(["c-skill-sql"]);
+    expect(messy.entries).toEqual([]);
   });
 
   it("fills empty live entries from the template selector without inventing claims", () => {
