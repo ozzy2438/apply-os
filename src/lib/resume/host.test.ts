@@ -12,6 +12,7 @@ import { normalizeJobPosting } from "@/lib/ingest/normalize";
 import { isApplicationExcludedProject } from "@/lib/canonical/claims";
 import { loadCanonicalProfile } from "@/lib/canonical/load";
 import { buildResumeContext } from "./context";
+import { fixtureContext, fixturePolicy } from "./fixture";
 import { makePlan } from "./planner";
 import { templateDraft, writerState } from "./writer";
 import { guardDraft } from "./guard";
@@ -30,7 +31,7 @@ import {
   reviewExistingResumeForJob,
 } from "./service";
 import { assertContext, parseDraft } from "./validation";
-import { pickResumeDraftJson } from "./host";
+import { pickResumeDraftJson, repairResumeDraft } from "./host";
 
 describe("resume studio host integration", () => {
   const previousOpenAi = process.env.OPENAI_API_KEY;
@@ -76,6 +77,30 @@ describe("resume studio host integration", () => {
     expect(missing.planId).toBe("plan-2");
     expect(missing.summaryClaimIds).toEqual([]);
     expect(missing.entries).toEqual([]);
+  });
+
+  it("fills empty live entries from the template selector without inventing claims", () => {
+    const ctx = fixtureContext();
+    const policy = fixturePolicy();
+    const plan = makePlan(ctx, policy);
+    const template = templateDraft(ctx, plan, policy);
+    const repaired = repairResumeDraft(
+      {
+        planId: plan.id,
+        summaryClaimIds: ["not-a-claim"],
+        skillClaimIds: [],
+        entries: [],
+        educationClaimIds: [],
+        certificationClaimIds: [],
+      },
+      ctx,
+      plan,
+      policy,
+    );
+    expect(repaired.entries).toEqual(template.entries);
+    expect(repaired.summaryClaimIds).toEqual(template.summaryClaimIds);
+    expect(repaired.entries.length).toBeGreaterThan(0);
+    expect(guardDraft(ctx, plan, repaired, policy).passed).toBe(true);
   });
 
   it("projects the canonical profile without dumping the library into writer state", () => {

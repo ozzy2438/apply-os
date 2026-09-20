@@ -1,8 +1,8 @@
 import { score } from "@typesafe-ai/sdk";
 import { getJevRuntime, isDemoMode } from "@/lib/jev/client";
-import type { ResumeContext, ResumePlan, ResumePolicy, ReviewResult, WriterPort } from "./types";
+import type { ResumeContext, ResumeDraft, ResumePlan, ResumePolicy, ReviewResult, WriterPort } from "./types";
 import { makeJevReviewer, type JevRunner } from "./jev-adapter";
-import { WRITER_INSTRUCTIONS, templateWriter } from "./writer";
+import { WRITER_INSTRUCTIONS, templateDraft, templateWriter } from "./writer";
 import { parseDraft } from "./validation";
 
 const WRITER_REVISION = "apply-os-writer-1.0.0";
@@ -47,6 +47,42 @@ export function pickResumeDraftJson(raw: unknown, planId?: string): unknown {
     picked.entries = [];
   }
   return picked;
+}
+
+/** Clamp model selections to the plan; fill empty work evidence from the template selector. */
+export function repairResumeDraft(
+  raw: ResumeDraft,
+  ctx: ResumeContext,
+  plan: ResumePlan,
+  policy: ResumePolicy,
+): ResumeDraft {
+  const template = templateDraft(ctx, plan, policy);
+  const allowed = new Set(plan.allowedClaimIds);
+  const clamp = (ids: string[] | undefined, fallback: string[], max: number) => {
+    const selected = (ids ?? []).filter((id) => allowed.has(id));
+    return (selected.length ? selected : fallback).slice(0, max);
+  };
+  const repairedEntries = (raw.entries ?? [])
+    .filter((entry) => plan.entryIds.includes(entry.subjectId))
+    .map((entry) => ({
+      subjectId: entry.subjectId,
+      claimIds: (entry.claimIds ?? []).filter((id) => allowed.has(id)).slice(0, policy.maxBulletsPerEntry),
+    }))
+    .filter((entry) => entry.claimIds.length > 0)
+    .slice(0, policy.maxEntries);
+  const educationClaimIds = clamp(raw.educationClaimIds, template.educationClaimIds, policy.maxCredentialClaims);
+  return parseDraft({
+    planId: plan.id,
+    summaryClaimIds: clamp(raw.summaryClaimIds, template.summaryClaimIds, policy.maxSummaryClaims),
+    skillClaimIds: clamp(raw.skillClaimIds, template.skillClaimIds, policy.maxSkills),
+    entries: repairedEntries.length ? repairedEntries : template.entries,
+    educationClaimIds,
+    certificationClaimIds: clamp(
+      raw.certificationClaimIds,
+      template.certificationClaimIds,
+      Math.max(0, policy.maxCredentialClaims - educationClaimIds.length),
+    ),
+  });
 }
 
 export function createResumeWriter(ctx: ResumeContext, plan: ResumePlan, policy: ResumePolicy): WriterPort {
@@ -94,7 +130,7 @@ export function createResumeWriter(ctx: ResumeContext, plan: ResumePlan, policy:
       const raw = completion.choices[0]?.message?.content ?? "";
       const match = raw.match(/\{[\s\S]*\}/);
       if (!match) throw new Error("WRITER_FAILED");
-      return parseDraft(pickResumeDraftJson(JSON.parse(match[0]), plan.id));
+      return repairResumeDraft(parseDraft(pickResumeDraftJson(JSON.parse(match[0]), plan.id)), ctx, plan, policy);
     },
   };
 }
