@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import os from "node:os";
 import path from "node:path";
 import { getDriver, resetDriverForTests, sqliteDriver } from "@/lib/db/driver";
@@ -33,16 +33,32 @@ import { assertContext, parseDraft } from "./validation";
 import { pickResumeDraftJson } from "./host";
 
 describe("resume studio host integration", () => {
+  const previousOpenAi = process.env.OPENAI_API_KEY;
+  const previousNetlifyOpenAi = process.env.NETLIFY_OPENAI_API_KEY;
+
+  beforeEach(() => {
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.NETLIFY_OPENAI_API_KEY;
+  });
+
+  afterEach(() => {
+    resetDriverForTests(undefined);
+    if (previousOpenAi === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousOpenAi;
+    if (previousNetlifyOpenAi === undefined) delete process.env.NETLIFY_OPENAI_API_KEY;
+    else process.env.NETLIFY_OPENAI_API_KEY = previousNetlifyOpenAi;
+  });
+
   it("strips extra model fields before the strict draft parser", () => {
     const picked = pickResumeDraftJson({
-      planId: "plan-1",
+      planId: "wrong",
       summaryClaimIds: ["c-summary"],
       skillClaimIds: ["c-skill-sql"],
-      entries: [{ subjectId: "demo-pipeline", claimIds: ["c-sql"] }],
+      entries: [{ subjectId: "demo-pipeline", claimIds: ["c-sql"], title: "extra" }],
       educationClaimIds: ["c-education"],
       certificationClaimIds: [],
       commentary: "ignore me",
-    });
+    }, "plan-1");
     expect(picked).toEqual({
       planId: "plan-1",
       summaryClaimIds: ["c-summary"],
@@ -52,10 +68,14 @@ describe("resume studio host integration", () => {
       certificationClaimIds: [],
     });
     expect(() => parseDraft(picked)).not.toThrow();
-  });
-
-  afterEach(() => {
-    resetDriverForTests(undefined);
+    const missing = pickResumeDraftJson({ planId: "ignored" }, "plan-2") as {
+      planId: string;
+      summaryClaimIds: string[];
+      entries: unknown[];
+    };
+    expect(missing.planId).toBe("plan-2");
+    expect(missing.summaryClaimIds).toEqual([]);
+    expect(missing.entries).toEqual([]);
   });
 
   it("projects the canonical profile without dumping the library into writer state", () => {

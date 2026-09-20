@@ -69,8 +69,9 @@ describe.skipIf(!live)("live OpenAI writer smoke", () => {
 
       expect(result.generation.mode).toBe("live");
       expect(result.generation.writerCallAttempts).toBeGreaterThan(0);
-      expect(result.draft, result.warnings.join("; ")).toBeTruthy();
-      expect(result.status, result.warnings.join("; ")).not.toBe("BLOCKED");
+      const failDetail = [...result.warnings, ...(result.guard?.errors ?? [])].join("; ");
+      expect(result.draft, failDetail).toBeTruthy();
+      expect(result.status, failDetail).not.toBe("BLOCKED");
       const guard = result.guard ?? guardDraft(ctx, plan, result.draft!, policy);
       expect(guard.passed, guard.errors.join(",")).toBe(true);
       const allowed = new Set(plan.allowedClaimIds);

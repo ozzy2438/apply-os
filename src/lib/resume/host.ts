@@ -20,12 +20,32 @@ const DRAFT_FIELDS = [
   "certificationClaimIds",
 ] as const;
 
+const CLAIM_ID_FIELDS = [
+  "summaryClaimIds",
+  "skillClaimIds",
+  "educationClaimIds",
+  "certificationClaimIds",
+] as const;
+
 /** Host sanitises untrusted model JSON before the strict draft parser. */
-export function pickResumeDraftJson(raw: unknown): unknown {
+export function pickResumeDraftJson(raw: unknown, planId?: string): unknown {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const source = raw as Record<string, unknown>;
   const picked: Record<string, unknown> = {};
   for (const key of DRAFT_FIELDS) picked[key] = source[key];
+  if (planId) picked.planId = planId;
+  for (const key of CLAIM_ID_FIELDS) {
+    if (!Array.isArray(picked[key])) picked[key] = [];
+  }
+  if (Array.isArray(source.entries)) {
+    picked.entries = source.entries.map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
+      const row = entry as Record<string, unknown>;
+      return { subjectId: row.subjectId, claimIds: row.claimIds };
+    });
+  } else {
+    picked.entries = [];
+  }
   return picked;
 }
 
@@ -54,13 +74,14 @@ export function createResumeWriter(ctx: ResumeContext, plan: ResumePlan, policy:
             {
               role: "user",
               content: JSON.stringify({
+                requiredPlanId: plan.id,
                 contract: {
-                  planId: "string",
-                  summaryClaimIds: ["string"],
-                  skillClaimIds: ["string"],
-                  entries: [{ subjectId: "string", claimIds: ["string"] }],
-                  educationClaimIds: ["string"],
-                  certificationClaimIds: ["string"],
+                  planId: plan.id,
+                  summaryClaimIds: ["approved claim id"],
+                  skillClaimIds: ["approved claim id"],
+                  entries: [{ subjectId: "plan entry subject id", claimIds: ["approved claim id"] }],
+                  educationClaimIds: ["approved claim id"],
+                  certificationClaimIds: ["approved claim id"],
                 },
                 state: input.state,
                 phase: input.phase,
@@ -73,7 +94,7 @@ export function createResumeWriter(ctx: ResumeContext, plan: ResumePlan, policy:
       const raw = completion.choices[0]?.message?.content ?? "";
       const match = raw.match(/\{[\s\S]*\}/);
       if (!match) throw new Error("WRITER_FAILED");
-      return parseDraft(pickResumeDraftJson(JSON.parse(match[0])));
+      return parseDraft(pickResumeDraftJson(JSON.parse(match[0]), plan.id));
     },
   };
 }
